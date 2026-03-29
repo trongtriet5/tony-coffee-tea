@@ -28,7 +28,7 @@ export interface CreateOrderPayload {
 }
 
 export const createOrder = (data: CreateOrderPayload): Promise<Order> => api.post('/orders', data).then((r) => r.data);
-export const getOrders = (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
-export const getDashboardStats = (): Promise<DashboardStats> => api.get('/orders/dashboard').then((r) => r.data);
+export const getOrders = (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
+export const getDashboardStats = (params?: { startDate?: string; endDate?: string }): Promise<DashboardStats> => api.get('/orders/dashboard', { params }).then((r) => r.data);
 
 export default api;

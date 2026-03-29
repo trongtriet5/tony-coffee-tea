@@ -62,6 +62,7 @@ export interface DashboardStats {
   today_net_revenue: number;
   revenue_by_day: Array<{ date: string; revenue: number }>;
   top_products: Array<{ name: string; count: number }>;
+  transaction_count_by_hour: Array<{ hour: string; count: number }>;
 }
 
 export interface VoucherStats {

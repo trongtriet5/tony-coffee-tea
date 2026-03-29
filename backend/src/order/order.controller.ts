@@ -20,14 +20,23 @@ export class OrderController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false })
-  async findAll(@Query('page') page?: number, @Query('limit') limit?: number, @Query('status') status?: string) {
-    return this.orderService.findAll({ page, limit, status });
+  @ApiQuery({ name: 'search', required: false })
+  async findAll(
+    @Query('page') page?: number, 
+    @Query('limit') limit?: number, 
+    @Query('status') status?: string,
+    @Query('search') search?: string
+  ) {
+    return this.orderService.findAll({ page, limit, status, search });
   }
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Business dashboard stats' })
-  async getDashboard() {
-    return this.orderService.getDashboardStats();
+  async getDashboard(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.orderService.getDashboardStats(startDate, endDate);
   }
 
   @Get(':id')

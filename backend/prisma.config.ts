@@ -5,4 +5,7 @@ export default defineConfig({
   datasource: {
     url: process.env.DIRECT_URL || 'postgresql://postgres.nqzzgrdzlzsxhicmljat:trongtriet5@aws-1-ap-south-1.pooler.supabase.com:5432/postgres',
   },
+  migrations: {
+    seed: 'npx ts-node prisma/seed.ts'
+  }
 });

@@ -67,8 +67,8 @@ export default function VoucherPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "40px", paddingLeft: isMobile ? "24px" : "120px" }}>
       <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900 }}>E-Voucher GOLD</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Ưu đãi nội bộ chuỗi Thịnh Thế Vinh Hoa</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900 }}>E-Voucher Thịnh Thế Vinh Hoa</h1>
+        <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Các ưu đãi của dịch vụ bao gồm ưu đãi cho khách hàng và ưu đãi nội bộ cho nhân viên chuỗi Thịnh Thế Vinh Hoa</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 24, marginBottom: 40 }}>

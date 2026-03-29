@@ -19,7 +19,7 @@ export default function Sidebar() {
   if (isMobile) return null; // Hide on mobile for POS screen custom nav
 
   const menuItems = [
-    { href: "/pos", icon: MdOutlineSpaceDashboard, label: "POS" },
+    { href: "/", icon: MdOutlineSpaceDashboard, label: "POS" },
     { href: "/orders", icon: MdOutlineReceiptLong, label: "History" },
     { href: "/dashboard", icon: MdPayment, label: "Stats" },
     { href: "/vouchers", icon: HiTicket, label: "Vouchers" },
@@ -42,19 +42,9 @@ export default function Sidebar() {
       zIndex: 1000,
       boxShadow: "4px 0 10px rgba(0,0,0,0.01)"
     }}>
-      {/* Home/Back Button */}
-      <Link href="/" style={{ 
-        marginBottom: 44, width: 48, height: 48, 
-        background: "var(--gold-gradient)", borderRadius: 14, 
-        display: "flex", alignItems: "center", justifyContent: "center", 
-        boxShadow: "0 4px 12px rgba(225,194,51,0.25)",
-        color: "white"
-      }}>
-        <HiArrowLeft size={20} />
-      </Link>
-
       {/* Nav Menu */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 32, marginTop: 40 }}>
+
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
