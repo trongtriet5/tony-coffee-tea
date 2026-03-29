@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name_vi     String
+  name_en     String
+  price       Float
+  category    String
+  available   Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  order_items OrderItem[]
+
+  @@map("products")
+}
+
+model Topping {
+  id          String      @id @default(uuid())
+  name        String
+  price       Float
+  available   Boolean     @default(true)
+  order_items OrderItemTopping[]
+
+  @@map("toppings")
+}
+
+model Voucher {
+  id           String    @id @default(uuid())
+  voucher_code String    @unique
+  employee_id  String
+  amount       Float
+  status       String    @default("UNUSED") // UNUSED, USED, EXPIRED
+  created_at   DateTime  @default(now())
+  used_at      DateTime?
+  expires_at   DateTime
+  orders       Order[]   @relation("OrderVouchers")
+
+  @@map("vouchers")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  order_number    String      @unique
+  total_amount    Float
+  discount_amount Float       @default(0)
+  final_amount    Float
+  payment_method  String      @default("CASH") // CASH, E_WALLET, VOUCHER, MIXED
+  status          String      @default("COMPLETED")
+  created_at      DateTime    @default(now())
+  items           OrderItem[]
+  vouchers        Voucher[]   @relation("OrderVouchers")
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String      @id @default(uuid())
+  order_id   String
+  product_id String
+  quantity   Int
+  unit_price Float
+  subtotal   Float
+  order      Order       @relation(fields: [order_id], references: [id])
+  product    Product     @relation(fields: [product_id], references: [id])
+  toppings   OrderItemTopping[]
+
+  @@map("order_items")
+}
+
+model OrderItemTopping {
+  id           String    @id @default(uuid())
+  order_item_id String
+  topping_id   String
+  name         String
+  price        Float
+  order_item   OrderItem @relation(fields: [order_item_id], references: [id])
+  topping      Topping   @relation(fields: [topping_id], references: [id])
+
+  @@map("order_item_toppings")
+}
+
+model ApiLog {
+  id         String   @id @default(uuid())
+  method     String
+  path       String
+  body       Json?
+  response   Json?
+  status     Int
+  duration   Int
+  created_at DateTime @default(now())
+
+  @@map("api_logs")
+}
