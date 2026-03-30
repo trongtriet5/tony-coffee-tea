@@ -36,6 +36,14 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
+  order_type?: string; // TAKEAWAY, DINE_IN (default: TAKEAWAY)
+
+  @IsString()
+  @IsOptional()
+  table_id?: string; // Required if order_type is DINE_IN
+
+  @IsString()
+  @IsOptional()
   cashier_id?: string;
 
   @IsString()

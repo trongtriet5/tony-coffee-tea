@@ -1,0 +1,303 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { createProduct, updateProduct, getProducts, getCategories, createTopping, updateTopping, getToppings } from "@/lib/api";
+import type { Product, Topping } from "@/types";
+import { HiPlus, HiCollection, HiSparkles, HiCheck, HiPencilAlt, HiBadgeCheck, HiBan } from "react-icons/hi";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
+
+export default function ProductsManagementPage() {
+  const [activeTab, setActiveTab] = useState<"product" | "topping">("product");
+  const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [toppings, setToppings] = useState<Topping[]>([]);
+  
+  const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [productForm, setProductForm] = useState({ name_vi: "", name_en: "", price: "", category: "Cà Phê", available: true });
+  
+  const [editingToppingId, setEditingToppingId] = useState<string | null>(null);
+  const [toppingForm, setToppingForm] = useState({ name: "", price: "", available: true });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setFetchLoading(true);
+    try {
+      const [cats, prods, tops] = await Promise.all([
+        getCategories(),
+        getProducts({ all: true }),
+        getToppings({ all: true })
+      ]);
+      setCategories(cats);
+      setProducts(prods);
+      setToppings(tops);
+    } catch (e) { console.error(e); }
+    finally { setFetchLoading(false); }
+  };
+
+  const notify = (msg: string) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(""), 3000);
+  };
+
+  const handleCreateOrUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productForm.name_vi || !productForm.price) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name_vi: productForm.name_vi,
+        name_en: productForm.name_en || productForm.name_vi,
+        price: parseFloat(productForm.price),
+        category: productForm.category,
+        available: productForm.available
+      };
+
+      if (editingProductId) {
+        await updateProduct(editingProductId, payload);
+        notify("Cập nhật món thành công!");
+      } else {
+        await createProduct(payload);
+        notify("Đã thêm món mới thành công!");
+      }
+      
+      setProductForm({ name_vi: "", name_en: "", price: "", category: productForm.category, available: true });
+      setEditingProductId(null);
+      fetchData();
+    } catch (error) {
+      alert("Có lỗi xảy ra khi xử lý món");
+    } finally { setLoading(false); }
+  };
+
+  const handleCreateOrUpdateTopping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!toppingForm.name || !toppingForm.price) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name: toppingForm.name,
+        price: parseFloat(toppingForm.price),
+        available: toppingForm.available
+      };
+      if (editingToppingId) {
+        await updateTopping(editingToppingId, payload);
+        notify("Cập nhật topping thành công!");
+      } else {
+        await createTopping(payload);
+        notify("Đã thêm topping mới thành công!");
+      }
+      setToppingForm({ name: "", price: "", available: true });
+      setEditingToppingId(null);
+      fetchData();
+    } catch (error) {
+      alert("Có lỗi xảy ra khi xử lý topping");
+    } finally { setLoading(false); }
+  };
+
+  const startEditProduct = (p: Product) => {
+    setEditingProductId(p.id);
+    setProductForm({ name_vi: p.name_vi, name_en: p.name_en, price: p.price.toString(), category: p.category, available: p.available });
+    setActiveTab("product");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const startEditTopping = (t: Topping) => {
+    setEditingToppingId(t.id);
+    setToppingForm({ name: t.name, price: t.price.toString(), available: t.available });
+    setActiveTab("topping");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingProductId(null);
+    setEditingToppingId(null);
+    setProductForm({ name_vi: "", name_en: "", price: "", category: "Cà Phê", available: true });
+    setToppingForm({ name: "", price: "", available: true });
+  };
+
+  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
+  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "40px 40px 40px 120px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        
+        {/* HEADER */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Menu Management</h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Quản lý danh mục Sản phẩm & Topping (Thêm / Sửa)</p>
+          </div>
+        </div>
+
+        {/* NOTIFICATION */}
+        <div style={{ 
+            height: successMsg ? 50 : 0, opacity: successMsg ? 1 : 0, overflow: "hidden", 
+            transition: "0.3s cubic-bezier(0.4, 0, 0.2, 1)", marginBottom: successMsg ? 24 : 0,
+            background: "var(--success)", color: "white", borderRadius: 16, display: "flex", 
+            alignItems: "center", padding: "0 20px", fontWeight: 800, fontSize: 13, gap: 10
+        }}>
+          <HiCheck size={18} /> {successMsg}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 32 }}>
+          
+          {/* LEFT: FORM SECTION */}
+          <div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 24, background: "white", padding: 6, borderRadius: 16, border: "1px solid var(--border)" }}>
+              <button onClick={() => { setActiveTab("product"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "product" ? "var(--accent)" : "transparent", color: activeTab === "product" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
+                <HiCollection size={16} /> MÓN CHÍNH
+              </button>
+              <button onClick={() => { setActiveTab("topping"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "topping" ? "var(--accent)" : "transparent", color: activeTab === "topping" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
+                <HiSparkles size={16} /> TOPPING
+              </button>
+            </div>
+
+            <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
+              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {activeTab === "product" ? (editingProductId ? "SỬA MÓN CHÍNH" : "THÊM MÓN CHÍNH") : (editingToppingId ? "SỬA TOPPING" : "THÊM TOPPING")}
+                {(editingProductId || editingToppingId) && (
+                  <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 11, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
+                )}
+              </h3>
+
+              {activeTab === "product" ? (
+                <form onSubmit={handleCreateOrUpdateProduct}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
+                    <div>
+                      <label style={labelStyle}>TÊN MÓN (TIẾNG VIỆT)</label>
+                      <input required placeholder="VD: Cà Phê Sữa Đá" style={inputStyle} value={productForm.name_vi} onChange={e => setProductForm({...productForm, name_vi: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>TÊN MÓN (TIẾNG ANH)</label>
+                      <input placeholder="VD: Iced Milk Coffee" style={inputStyle} value={productForm.name_en} onChange={e => setProductForm({...productForm, name_en: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
+                      <input required type="number" placeholder="VD: 35000" style={inputStyle} value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>DANH MỤC</label>
+                      <select style={inputStyle} value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
+                        {categories.length > 0 ? categories.map(c => <option key={c.category} value={c.category}>{c.category}</option>) : <option value="Cà Phê">Cà Phê</option>}
+                        <option value="Trà Trái Cây">Trà Trái Cây</option>
+                        <option value="Trà Sữa">Trà Sữa</option>
+                        <option value="Đồ Ăn Vặt">Đồ Ăn Vặt</option>
+                        <option value="Món Mới">Món Mới</option>
+                      </select>
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", width: "fit-content", marginBottom: 32 }}>
+                    <input type="checkbox" checked={productForm.available} onChange={e => setProductForm({...productForm, available: e.target.checked})} style={{ width: 18, height: 18, accentColor: "var(--accent)" }} />
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-primary)" }}>Khả dụng (Hiện trên Menu)</span>
+                  </label>
+
+                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
+                    {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingProductId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU MÓN MỚI</>}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleCreateOrUpdateTopping}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
+                    <div>
+                      <label style={labelStyle}>TÊN TOPPING</label>
+                      <input required placeholder="VD: Trân Châu Trắng" style={inputStyle} value={toppingForm.name} onChange={e => setToppingForm({...toppingForm, name: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
+                      <input required type="number" placeholder="VD: 10000" style={inputStyle} value={toppingForm.price} onChange={e => setToppingForm({...toppingForm, price: e.target.value})} />
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", width: "fit-content", marginBottom: 32 }}>
+                    <input type="checkbox" checked={toppingForm.available} onChange={e => setToppingForm({...toppingForm, available: e.target.checked})} style={{ width: 18, height: 18, accentColor: "var(--accent)" }} />
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-primary)" }}>Khả dụng (Cho phép Order)</span>
+                  </label>
+
+                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
+                    {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingToppingId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU TOPPING MỚI</>}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: LIST SECTION */}
+          <div>
+            <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: "24px 8px 32px 32px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", height: "calc(100vh - 160px)", display: "flex", flexDirection: "column" }}>
+              <div style={{ marginBottom: 24, paddingRight: 24 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 900 }}>Danh sách hiện có</h3>
+                <p style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>Nhấn vào dòng để chỉnh sửa thông tin món hoặc topping.</p>
+              </div>
+
+              {fetchLoading ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}><AiOutlineLoading3Quarters size={32} className="spin" color="var(--accent)" /></div>
+              ) : (
+                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }} className="custom-scroll">
+                  {/* PRODUCTS */}
+                  <div style={{ marginBottom: 32 }}>
+                    <h4 style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}><HiCollection size={16}/> SẢN PHẨM CHÍNH ({products.length})</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {products.map(p => (
+                        <div key={p.id} onClick={() => startEditProduct(p)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: editingProductId === p.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontSize: 14, fontWeight: 900 }}>{p.name_vi}</span>
+                              {p.available ? <HiBadgeCheck size={16} color="var(--success)"/> : <HiBan size={16} color="var(--danger)"/>}
+                            </div>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", display: "flex", gap: 8 }}>
+                              <span style={{ background: "white", padding: "2px 8px", borderRadius: 6 }}>{p.category}</span>
+                              <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price)}</span>
+                            </div>
+                          </div>
+                          <div><HiPencilAlt size={20} color={editingProductId === p.id ? "var(--accent)" : "var(--text-muted)"} /></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* TOPPINGS */}
+                  <div>
+                    <h4 style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}><HiSparkles size={16}/> TOPPING ({toppings.length})</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {toppings.map(t => (
+                        <div key={t.id} onClick={() => startEditTopping(t)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: editingToppingId === t.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontSize: 14, fontWeight: 900 }}>{t.name}</span>
+                              {t.available ? <HiBadgeCheck size={16} color="var(--success)"/> : <HiBan size={16} color="var(--danger)"/>}
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary)" }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(t.price)}</span>
+                          </div>
+                          <div><HiPencilAlt size={20} color={editingToppingId === t.id ? "var(--accent)" : "var(--text-muted)"} /></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <style>{`
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .hover-btn:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(202, 162, 26, 0.2); }
+        .hover-btn:active { transform: translateY(0); }
+        .list-item:hover { transform: translateX(4px); background: #fdfbf7 !important; border-color: rgba(202, 162, 26, 0.3) !important; }
+        input:focus, select:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(202, 162, 26, 0.1); }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+      `}</style>
+    </div>
+  );
+}

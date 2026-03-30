@@ -16,6 +16,7 @@ model Product {
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
   order_items OrderItem[]
+  recipes     ProductRecipe[]
 
   @@map("products")
 }
@@ -26,14 +27,29 @@ model Topping {
   price       Float
   available   Boolean     @default(true)
   order_items OrderItemTopping[]
+  recipes     ToppingRecipe[]
 
   @@map("toppings")
+}
+
+model Employee {
+  id            String    @id
+  name          String
+  position_name String
+  role          String    @default("STAFF") // STAFF, MANAGER, HOD
+  is_official   Boolean   @default(false)
+  vouchers      Voucher[]
+  created_at    DateTime  @default(now())
+
+  @@map("employees")
 }
 
 model Voucher {
   id           String    @id @default(uuid())
   voucher_code String    @unique
   employee_id  String
+  employee     Employee  @relation(fields: [employee_id], references: [id])
+  brand        String    @default("MAYCHA") // MAYCHA, TAMHAO
   amount       Float
   status       String    @default("UNUSED") // UNUSED, USED, EXPIRED
   created_at   DateTime  @default(now())
@@ -52,7 +68,12 @@ model Order {
   final_amount    Float
   payment_method  String      @default("CASH") // CASH, E_WALLET, VOUCHER, MIXED
   status          String      @default("COMPLETED")
+  order_type      String      @default("TAKEAWAY") // TAKEAWAY, DINE_IN
+  table_id        String?
+  note            String?
   created_at      DateTime    @default(now())
+  
+  table           Table?      @relation(fields: [table_id], references: [id])
   items           OrderItem[]
   vouchers        Voucher[]   @relation("OrderVouchers")
 
@@ -66,6 +87,7 @@ model OrderItem {
   quantity   Int
   unit_price Float
   subtotal   Float
+  note       String?
   order      Order       @relation(fields: [order_id], references: [id])
   product    Product     @relation(fields: [product_id], references: [id])
   toppings   OrderItemTopping[]
@@ -96,4 +118,61 @@ model ApiLog {
   created_at DateTime @default(now())
 
   @@map("api_logs")
+}
+
+model Material {
+  id            String   @id @default(uuid())
+  name          String
+  unit          String   // e.g. "g", "ml", "cái"
+  cost_per_unit Float
+  stock_current Float    @default(0)
+  transactions  MaterialTransaction[]
+  recipes       ProductRecipe[]
+  topping_recipes ToppingRecipe[]
+
+  @@map("materials")
+}
+
+model MaterialTransaction {
+  id           String   @id @default(uuid())
+  material_id  String
+  material     Material @relation(fields: [material_id], references: [id])
+  type         String   // "IN", "OUT", "ADJUST", "USED"
+  quantity     Float
+  note         String?
+  created_at   DateTime @default(now())
+
+  @@map("material_transactions")
+}
+
+model ProductRecipe {
+  id           String   @id @default(uuid())
+  product_id   String
+  product      Product  @relation(fields: [product_id], references: [id])
+  material_id  String
+  material     Material @relation(fields: [material_id], references: [id])
+  quantity     Float    // How many units of material needed per product
+
+  @@map("product_recipes")
+}
+
+model ToppingRecipe {
+  id           String   @id @default(uuid())
+  topping_id   String
+  topping      Topping  @relation(fields: [topping_id], references: [id])
+  material_id  String
+  material     Material @relation(fields: [material_id], references: [id])
+  quantity     Float
+
+  @@map("topping_recipes")
+}
+
+model Table {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  area       String   @default("Chung") // e.g. "Indoor", "Outdoor", "VIP"
+  status     String   @default("AVAILABLE") // AVAILABLE, OCCUPIED
+  orders     Order[]
+
+  @@map("tables")
 }

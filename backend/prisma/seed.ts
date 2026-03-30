@@ -7,16 +7,55 @@ async function main() {
 
   try {
     await client.connect();
-    console.log('--- STARTING ULTRA-FAST BULK SEED (MAR 01 - MAR 29) ---');
-    await client.query('TRUNCATE TABLE "order_item_toppings", "order_items", "orders", "vouchers", "products", "toppings", "_OrderVouchers" CASCADE');
+    console.log('--- STARTING CLEAN SEED (24H Coverage) ---');
 
+    // Truncate all tables
+    await client.query(`
+      TRUNCATE TABLE "employees", "order_item_toppings", "order_items", "orders", "vouchers", 
+      "products", "toppings", "tables", "materials", "material_transactions", 
+      "product_recipes", "topping_recipes", "_OrderVouchers" CASCADE
+    `);
+
+    // 1. Employees
+    const empList = [
+      { id: 'NV001', name: 'Nguyễn Văn A', pos: 'Staff Official', r: 'STAFF', o: true },
+      { id: 'NV002', name: 'Trần Thị B', pos: 'Staff Newcomer', r: 'STAFF', o: false },
+      { id: 'QL001', name: 'Phạm Văn C', pos: 'Manager One', r: 'MANAGER', o: true },
+      { id: 'GD001', name: 'Lê Hoàng D', pos: 'Head of Dep', r: 'HOD', o: true },
+    ];
+    for (const emp of empList) {
+      await client.query('INSERT INTO "employees" (id, name, position_name, role, is_official) VALUES ($1, $2, $3, $4, $5)', [emp.id, emp.name, emp.pos, emp.r, emp.o]);
+    }
+
+    // 2. Materials
+    const materialList = [
+      { name: 'Sữa đặc Larosee', unit: 'can', cost: 55000, stock: 100 },
+      { name: 'Cà phê Hạt Arabica', unit: 'kg', cost: 150000, stock: 50 },
+      { name: 'Trân châu đen', unit: 'kg', cost: 35000, stock: 20 },
+      { name: 'Trà Oolong', unit: 'kg', cost: 200000, stock: 10 },
+    ];
+    const materials: any[] = [];
+    for (const m of materialList) {
+      const id = uuidv4();
+      await client.query('INSERT INTO "materials" (id, name, unit, cost_per_unit, stock_current) VALUES ($1, $2, $3, $4, $5)', [id, m.name, m.unit, m.cost, m.stock]);
+      materials.push({ id, ...m });
+    }
+
+    // 3. Tables
+    const tableList = [
+      { name: 'T-01', area: 'Indoor' }, { name: 'T-02', area: 'Indoor' }, { name: 'T-03', area: 'Indoor' },
+      { name: 'V-01', area: 'VIP' }, { name: 'V-02', area: 'VIP' },
+      { name: 'O-01', area: 'Outdoor' }, { name: 'O-02', area: 'Outdoor' }
+    ];
+    for (const t of tableList) {
+      await client.query('INSERT INTO "tables" (id, name, area, status) VALUES ($1, $2, $3, $4)', [uuidv4(), t.name, t.area, 'AVAILABLE']);
+    }
+
+    // 4. Products
     const prList = [
       { n: 'Trà Đào Cam Sả', p: 45000, c: 'TRÀ TRÁI CÂY' }, { n: 'Trà Vải Lài', p: 42000, c: 'TRÀ TRÁI CÂY' },
       { n: 'Trà Sữa Matcha', p: 48000, c: 'TRÀ SỮA' }, { n: 'Trà Sữa Trân Châu', p: 45000, c: 'TRÀ SỮA' },
-      { n: 'Cà Phê Sữa', p: 29000, c: 'CÀ PHÊ' }, { n: 'Cà Phê Đen', p: 25000, c: 'CÀ PHÊ' },
-      { n: 'Bạc Xỉu', p: 32000, c: 'CÀ PHÊ' }, { n: 'Cà Phê Muối', p: 35000, c: 'CÀ PHÊ' },
-      { n: 'Sinh Tố Bơ', p: 55000, c: 'ĐÁ XAY' }, { n: 'Chanh Tuyết', p: 38000, c: 'ĐÁ XAY' },
-      { n: 'Nước Ép Cam', p: 40000, c: 'NƯỚC ÉP' }, { n: 'Nước Ép Dưa Hấu', p: 35000, c: 'NƯỚC ÉP' }
+      { n: 'Cà Phê Sữa', p: 29000, c: 'CÀ PHÊ' }, { n: 'Cà Phê Đen', p: 25000, c: 'CÀ PHÊ' }
     ];
     const products: any[] = [];
     for (const pr of prList) {
@@ -25,9 +64,9 @@ async function main() {
       products.push({ id, ...pr });
     }
 
+    // 5. Toppings
     const tList = [
-      { n: 'Trân Châu Đen', p: 5000 }, { n: 'Trân Châu Trắng', p: 5000 },
-      { n: 'Kem Béo', p: 10000 }, { n: 'Thạch Nha Đam', p: 5000 }, { n: 'Thạch Trái Cây', p: 5000 }
+      { n: 'Trân Châu Đen', p: 5000 }, { n: 'Trân Châu Trắng', p: 5000 }, { n: 'Kem Béo', p: 10000 }
     ];
     const toppings: any[] = [];
     for (const t of tList) {
@@ -36,120 +75,63 @@ async function main() {
       toppings.push({ id, ...t });
     }
 
-    const vList = [
-      { code: 'GIAM10K', amount: 10000 },
-      { code: 'GIAM20K', amount: 20000 },
-      { code: 'SIEUSALE50', amount: 50000 }
-    ];
-    const vouchers: any[] = [];
-    for (const v of vList) {
-      const id = uuidv4();
-      await client.query('INSERT INTO "vouchers" (id, voucher_code, employee_id, amount, status, expires_at) VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL \'1 year\')', [id, v.code, 'EMP-SEED', v.amount, 'USED']);
-      vouchers.push({ id, ...v });
-    }
-
-    // Tạo mảng giờ đầy đủ: 08, 09, ..., 23 (16 khung giờ)
-    const HOURS = Array.from({ length: 16 }, (_, i) => 8 + i); // [8, 9, ..., 23]
+    // 6. Orders (Full 24h Coverage)
+    const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
     for (let day = 1; day <= 29; day++) {
       const dateStr = `2026-03-${day.toString().padStart(2, '0')}`;
-
-      // Tổng số order ngẫu nhiên từ 90 -> 130
-      const totalCount = 90 + Math.floor(Math.random() * 41);
+      const totalCount = 100 + Math.floor(Math.random() * 50);
       process.stdout.write(`Day ${day}: ${totalCount} orders... `);
 
-      // ── Bước 1: Xây dựng danh sách giờ đảm bảo mỗi khung giờ có ít nhất 1 order ──
-      // Mỗi giờ trong 08-23 nhận 1 order "guaranteed", phần còn lại random
-      const hourSlots: number[] = [];
+      const hourSlots: any[] = [];
+      for (const h of HOURS) { hourSlots.push(h); hourSlots.push(h); } // Min 2 per hour
+      const remaining = totalCount - hourSlots.length;
+      for (let r = 0; r < remaining; r++) { hourSlots.push(HOURS[Math.floor(Math.random() * HOURS.length)]); }
 
-      // Guaranteed: 1 order mỗi giờ trong 08-23
-      for (const h of HOURS) {
-        hourSlots.push(h);
-      }
-
-      // Phần còn lại: random trong 08-23
-      const remaining = totalCount - HOURS.length;
-      for (let r = 0; r < remaining; r++) {
-        hourSlots.push(HOURS[Math.floor(Math.random() * HOURS.length)]);
-      }
-
-      // Shuffle để thứ tự không bị tuần tự
+      // Shuffle
       for (let s = hourSlots.length - 1; s > 0; s--) {
         const j = Math.floor(Math.random() * (s + 1));
         [hourSlots[s], hourSlots[j]] = [hourSlots[j], hourSlots[s]];
       }
 
-      // ── Bước 2: Tạo orders ──
-      const oValues: any[] = []; const oParams: any[] = [];
-      const iValues: any[] = []; const iParams: any[] = [];
-      const tValues: any[] = []; const tParams: any[] = [];
-      const vValues: any[] = []; const vParams: any[] = [];
-
       for (let i = 0; i < totalCount; i++) {
         const hour = hourSlots[i];
         const min = Math.floor(Math.random() * 60);
-        const sec = Math.floor(Math.random() * 60);
-        const oDate = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}+07:00`);
+        const isoString = `${dateStr}T${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:00+07:00`;
+        const oDate = new Date(isoString);
 
         const oId = uuidv4();
         const oNum = `ORD-${day.toString().padStart(2, '0')}-${i.toString().padStart(3, '0')}`;
 
         let oTotal = 0;
         const numItems = 1 + Math.floor(Math.random() * 2);
+        const pendingItems: any[] = [];
+
         for (let k = 0; k < numItems; k++) {
           const itemId = uuidv4();
           const p = products[Math.floor(Math.random() * products.length)];
           const qty = 1 + Math.floor(Math.random() * 2);
-
-          let tP = 0;
-          if (Math.random() > 0.6) {
-            const t = toppings[Math.floor(Math.random() * toppings.length)];
-            tP = t.p;
-            const tpLen = tParams.length;
-            tParams.push(uuidv4(), itemId, t.id, t.n, t.p);
-            tValues.push(`($${tpLen + 1}, $${tpLen + 2}, $${tpLen + 3}, $${tpLen + 4}, $${tpLen + 5})`);
-          }
-
-          const subt = (p.p + tP) * qty;
+          const subt = (p.p as number) * qty;
           oTotal += subt;
 
-          const ipLen = iParams.length;
-          iParams.push(itemId, oId, p.id, qty, p.p, subt);
-          iValues.push(`($${ipLen + 1}, $${ipLen + 2}, $${ipLen + 3}, $${ipLen + 4}, $${ipLen + 5}, $${ipLen + 6})`);
+          pendingItems.push([itemId, oId, p.id, qty, p.p, subt]);
         }
 
-        let discount = 0;
-        // ~25% chance of applying a voucher
-        if (Math.random() > 0.75) {
-          const v = vouchers[Math.floor(Math.random() * vouchers.length)];
-          discount = v.amount;
-          if (discount > oTotal) discount = oTotal;
+        await client.query('INSERT INTO "orders" (id, order_number, total_amount, discount_amount, final_amount, created_at, status, order_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [oId, oNum, oTotal, 0, oTotal, oDate, 'COMPLETED', 'TAKEAWAY']);
 
-          const vpLen = vParams.length;
-          vParams.push(oId, v.id);
-          vValues.push(`($${vpLen + 1}, $${vpLen + 2})`);
+        for (const itemArgs of pendingItems) {
+          await client.query('INSERT INTO "order_items" (id, order_id, product_id, quantity, unit_price, subtotal) VALUES ($1, $2, $3, $4, $5, $6)', itemArgs);
         }
-
-        const opLen = oParams.length;
-        oParams.push(oId, oNum, oTotal, discount, oTotal - discount, oDate);
-        oValues.push(`($${opLen + 1}, $${opLen + 2}, $${opLen + 3}, $${opLen + 4}, $${opLen + 5}, $${opLen + 6})`);
-      }
-
-      await client.query(`INSERT INTO "orders" (id, order_number, total_amount, discount_amount, final_amount, created_at) VALUES ${oValues.join(',')}`, oParams);
-      await client.query(`INSERT INTO "order_items" (id, order_id, product_id, quantity, unit_price, subtotal) VALUES ${iValues.join(',')}`, iParams);
-      if (tValues.length > 0) {
-        await client.query(`INSERT INTO "order_item_toppings" (id, order_item_id, topping_id, name, price) VALUES ${tValues.join(',')}`, tParams);
-      }
-      if (vValues.length > 0) {
-        await client.query(`INSERT INTO "_OrderVouchers" ("A", "B") VALUES ${vValues.join(',')}`, vParams);
       }
       console.log('OK');
     }
-    console.log('--- ENHANCED BULK SEEDING COMPLETED ---');
+
+    console.log('--- DATA SEEDING COMPLETED SUCCESSFULLY ---');
   } catch (e) {
     console.error('SEEDING FAILED:', e);
   } finally {
     await client.end();
   }
 }
+
 main();

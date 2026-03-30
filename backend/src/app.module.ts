@@ -5,6 +5,9 @@ import { PrismaModule } from './prisma/prisma.module';
 import { VoucherModule } from './voucher/voucher.module';
 import { OrderModule } from './order/order.module';
 import { ProductModule } from './product/product.module';
+import { MaterialModule } from './material/material.module';
+import { RecipeModule } from './recipe/recipe.module';
+import { TableModule } from './table/table.module';
 import { LoggingInterceptor } from './logging.interceptor';
 
 @Module({
@@ -14,6 +17,9 @@ import { LoggingInterceptor } from './logging.interceptor';
     VoucherModule,
     OrderModule,
     ProductModule,
+    MaterialModule,
+    RecipeModule,
+    TableModule,
   ],
   providers: [
     {

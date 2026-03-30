@@ -10,6 +10,8 @@ import {
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import * as XLSX from "xlsx";
+import { BiCoffeeTogo, BiDish } from "react-icons/bi";
+import { MdPayment, MdOutlineDeliveryDining } from "react-icons/md";
 
 const formatVND = (n: number) =>
    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
@@ -75,7 +77,7 @@ export default function OrdersPage() {
          const res = await getOrders({ page: 1, limit: 10000, search });
          const allOrders = (res as any).data || [];
          
-         const headers = ["MÃ ĐƠN HÀNG", "THỜI GIAN", "TỔNG SỐ MÓN", "CHI TIẾT MÓN", "GIẢM GIÁ (VND)", "TỔNG THANH TOÁN (VND)", "TRẠNG THÁI"];
+         const headers = ["MÃ ĐƠN HÀNG", "THỜI GIAN", "TỔNG SỐ MÓN", "CHI TIẾT MÓN", "GIẢM GIÁ (VND)", "TỔNG THANH TOÁN (VND)", "THANH TOÁN", "HÌNH THỨC", "TRẠNG THÁI"];
          
          const rows = allOrders.map((o: any) => {
             const itemsStr = (o.items || []).map((i: any) => `${i.quantity}x ${i.product?.name_vi || 'Món'}`).join('; ');
@@ -86,6 +88,8 @@ export default function OrdersPage() {
                itemsStr,
                o.discount_amount,
                o.final_amount,
+               o.payment_method === "CASH" ? "Tiền mặt" : "Chuyển khoản",
+               o.order_type === "TAKEAWAY" ? "Mang đi" : "Tại chỗ",
                "HOÀN TẤT"
             ];
          });
@@ -188,6 +192,8 @@ export default function OrdersPage() {
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>MÃ ĐƠN HÀNG</th>
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>THỜI GIAN</th>
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>SẢN PHẨM</th>
+                        <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>PHƯƠNG THỨC</th>
+                        <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>HÌNH THỨC</th>
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>GIẢM GIÁ</th>
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>THANH TOÁN</th>
                         <th style={{ padding: "20px 24px", fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>TRẠNG THÁI</th>
@@ -197,7 +203,7 @@ export default function OrdersPage() {
                   <tbody style={{ position: "relative" }}>
                      {loading && (
                         <tr style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
-                           <td colSpan={7} style={{ textAlign: "center", padding: 40 }}>
+                           <td colSpan={9} style={{ textAlign: "center", padding: 40 }}>
                               <div className="spin" style={{ width: 24, height: 24, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto" }} />
                            </td>
                         </tr>
@@ -207,6 +213,18 @@ export default function OrdersPage() {
                            <td style={{ padding: "20px 24px", fontWeight: 800, fontSize: 14 }}>{order.order_number}</td>
                            <td style={{ padding: "20px 24px", fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>{formatExactDBTime(order.created_at, "HH:mm • dd/MM")}</td>
                            <td style={{ padding: "20px 24px", fontSize: 13, fontWeight: 700 }}>{order.items?.length || 0} món</td>
+                           <td style={{ padding: "20px 24px", fontSize: 12, fontWeight: 800 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                 <MdPayment size={16} color="var(--accent)" />
+                                 {order.payment_method === "CASH" ? "TIỀN MẶT" : "CHUYỂN KHOẢN"}
+                              </div>
+                           </td>
+                           <td style={{ padding: "20px 24px", fontSize: 12, fontWeight: 800 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                 {order.order_type === "TAKEAWAY" ? <MdOutlineDeliveryDining size={18} color="var(--accent)" /> : <BiDish size={18} color="var(--accent)" />}
+                                 {order.order_type === "TAKEAWAY" ? "MANG ĐI" : "TẠI CHỖ"}
+                              </div>
+                           </td>
                            <td style={{ padding: "20px 24px", fontSize: 13, fontWeight: 700, color: "var(--danger)" }}>-{formatVND(order.discount_amount)}</td>
                            <td style={{ padding: "20px 24px", fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>{formatVND(order.final_amount)}</td>
                            <td style={{ padding: "20px 24px" }}>
@@ -217,7 +235,7 @@ export default function OrdersPage() {
                      ))}
                      {!loading && orders.length === 0 && (
                         <tr>
-                           <td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", fontWeight: 700 }}>Không tìm thấy đơn hàng nào</td>
+                           <td colSpan={9} style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", fontWeight: 700 }}>Không tìm thấy đơn hàng nào</td>
                         </tr>
                      )}
                   </tbody>

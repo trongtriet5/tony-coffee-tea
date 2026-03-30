@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { getProducts, getCategories, getToppings, validateVoucher, createOrder } from "@/lib/api";
-import type { Product, Topping, CartItem, Voucher, PaymentMethod } from "@/types";
+import { getProducts, getCategories, getToppings, validateVoucher, createOrder, getAvailableTables, getOrder, addItemsToOrder } from "@/lib/api";
+import type { Product, Topping, CartItem, Voucher, PaymentMethod, OrderType, Table } from "@/types";
 import {
   HiChevronLeft, HiPlus, HiMinus, HiTrash, HiTicket, HiShoppingCart,
   HiSearch, HiCheckCircle, HiX, HiPlusCircle
@@ -23,6 +23,7 @@ export default function POSPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
 
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
   const [selectedToppings, setSelectedToppings] = useState<Record<string, number>>({});
@@ -36,15 +37,45 @@ export default function POSPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK_TRANSFER">("CASH");
+  const [orderType, setOrderType] = useState<OrderType>("TAKEAWAY");
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [showTableActionModal, setShowTableActionModal] = useState<Table | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    Promise.all([getProducts(), getCategories(), getToppings()]).then(([prods, cats, tops]) => {
+    Promise.all([getProducts(), getCategories(), getToppings(), getAvailableTables()]).then(async ([prods, cats, tops, tbls]) => {
       setProducts(prods);
       setCategories([...cats.map(c => c.category), "Topping"]);
       setToppings(tops);
+      setTables(tbls);
+
+      const params = new URLSearchParams(window.location.search);
+      const tId = params.get('tableId');
+      const oId = params.get('orderId');
+      if (tId && oId) {
+        setSelectedTableId(tId);
+        setActiveOrderId(oId);
+        setOrderType("DINE_IN");
+        
+        // Fetch existing order items to display
+        try {
+          const existingOrder = await getOrder(oId);
+          if (existingOrder && existingOrder.items) {
+            const existingCartItems = existingOrder.items.map((item: any) => ({
+              product: item.product,
+              quantity: item.quantity,
+              selectedToppings: item.toppings?.map((t: any) => t.topping) || [],
+              isExisting: true // Flag to distinguish already served items
+            }));
+            setCart(existingCartItems);
+          }
+        } catch (err) {
+          console.error("Failed to load existing order items", err);
+        }
+      }
     });
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
@@ -97,6 +128,7 @@ export default function POSPage() {
     setCart((prev) => {
       const topIds = selectedTops.map(t => t.id).sort().join(',');
       const existing = prev.find((i) =>
+        !i.isExisting && // Only match with newly added items, not served ones
         i.product.id === product.id &&
         (i.selectedToppings || []).map(t => t.id).sort().join(',') === topIds
       );
@@ -118,7 +150,11 @@ export default function POSPage() {
     return base + tops;
   };
 
-  const totalAmount = cart.reduce((s, i) => s + calculateItemPrice(i) * i.quantity, 0);
+  const totalAmount = cart.reduce((s, i) => {
+    // Only sum up items that are NOT already in the existing order
+    if (i.isExisting) return s;
+    return s + calculateItemPrice(i) * i.quantity;
+  }, 0);
   const totalDiscount = appliedVouchers.reduce((s, v) => s + v.amount, 0);
   const finalAmount = Math.max(0, totalAmount - totalDiscount);
 
@@ -134,20 +170,36 @@ export default function POSPage() {
 
   const checkout = async () => {
     if (cart.length === 0) return;
+    if (orderType === "DINE_IN" && !selectedTableId) {
+      alert("Vui lòng chọn bàn");
+      return;
+    }
     setIsCheckingOut(true);
     try {
-      const payload = {
-        items: cart.map(i => ({
-          product_id: i.product.id,
-          quantity: i.quantity,
-          topping_ids: i.selectedToppings?.map(t => t.id)
-        })),
-        voucher_codes: appliedVouchers.map(v => v.voucher_code),
-        payment_method: paymentMethod
-      };
-      const order = await createOrder(payload);
+      const items = cart.map(i => ({
+        product_id: i.product.id,
+        quantity: i.quantity,
+        topping_ids: i.selectedToppings?.map(t => t.id)
+      }));
+
+      let order;
+      if (activeOrderId) {
+        // ADDING ITEMS TO EXISTING ORDER
+        order = await addItemsToOrder(activeOrderId, items, paymentMethod);
+      } else {
+        // NEW ORDER
+        const payload = {
+          items,
+          voucher_codes: appliedVouchers.map(v => v.voucher_code),
+          payment_method: paymentMethod,
+          order_type: orderType,
+          table_id: selectedTableId || undefined
+        };
+        order = await createOrder(payload);
+      }
+
       setOrderSuccess(order);
-      setCart([]); setAppliedVouchers([]); setIsCartOpen(false);
+      setCart([]); setAppliedVouchers([]); setIsCartOpen(false); setSelectedTableId(null); setActiveOrderId(null);
     } catch (err) { alert("Lỗi hệ thống khi thanh toán"); } finally { setIsCheckingOut(false); }
   };
 
@@ -204,9 +256,14 @@ export default function POSPage() {
 
           <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
             {cart.map((item, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 16, marginBottom: 16, borderBottom: "1px solid var(--border-light)", paddingBottom: 16, alignItems: "center" }}>
+              <div key={idx} style={{ display: "flex", gap: 16, marginBottom: 16, borderBottom: "1px solid var(--border-light)", paddingBottom: 16, alignItems: "center", opacity: item.isExisting ? 0.7 : 1 }}>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 800, fontSize: 15 }}>{item.product.name_vi}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <p style={{ fontWeight: 800, fontSize: 15 }}>{item.product.name_vi}</p>
+                    {item.isExisting && (
+                      <span style={{ fontSize: 9, fontWeight: 900, background: "var(--bg-primary)", color: "var(--text-muted)", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--border)" }}>ĐÃ PHỤC VỤ</span>
+                    )}
+                  </div>
                   {(item.selectedToppings || []).length > 0 && (
                     <p style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
                       + {Object.entries(item.selectedToppings?.reduce((acc: any, t) => { acc[t.name] = (acc[t.name] || 0) + 1; return acc; }, {}) || {}).map(([name, qty]) => `${name} x${qty}`).join(', ')}
@@ -214,11 +271,15 @@ export default function POSPage() {
                   )}
                   <p style={{ fontSize: 13, color: "var(--accent)", fontWeight: 800, marginTop: 4 }}>{formatVND(calculateItemPrice(item))} / món</p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => updateQty(item, -1)} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><HiMinus size={16} /></button>
-                  <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.quantity}</span>
-                  <button onClick={() => updateQty(item, 1)} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><HiPlus size={16} /></button>
-                </div>
+                {!item.isExisting ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button onClick={() => updateQty(item, -1)} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><HiMinus size={16} /></button>
+                    <span style={{ fontWeight: 900, minWidth: 20, textAlign: "center" }}>{item.quantity}</span>
+                    <button onClick={() => updateQty(item, 1)} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><HiPlus size={16} /></button>
+                  </div>
+                ) : (
+                  <div style={{ fontWeight: 900, fontSize: 15, paddingRight: 10 }}>x{item.quantity}</div>
+                )}
               </div>
             ))}
           </div>
@@ -241,17 +302,61 @@ export default function POSPage() {
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button 
-                onClick={() => setPaymentMethod("CASH")} 
+              <button
+                onClick={() => setPaymentMethod("CASH")}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, fontWeight: 900, fontSize: 13, border: paymentMethod === "CASH" ? "2px solid var(--accent)" : "1px solid var(--border)", background: paymentMethod === "CASH" ? "var(--bg-primary)" : "white", color: paymentMethod === "CASH" ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", transition: "0.2s" }}
               >
                 TIỀN MẶT
               </button>
-              <button 
-                onClick={() => setPaymentMethod("BANK_TRANSFER")} 
+              <button
+                onClick={() => setPaymentMethod("BANK_TRANSFER")}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, fontWeight: 900, fontSize: 13, border: paymentMethod === "BANK_TRANSFER" ? "2px solid var(--accent)" : "1px solid var(--border)", background: paymentMethod === "BANK_TRANSFER" ? "var(--bg-primary)" : "white", color: paymentMethod === "BANK_TRANSFER" ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", transition: "0.2s" }}
               >
                 CHUYỂN KHOẢN
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button
+                onClick={() => {
+                  setOrderType("TAKEAWAY");
+                  setSelectedTableId(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 12,
+                  fontWeight: 900,
+                  fontSize: 13,
+                  border: orderType === "TAKEAWAY" ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  background: orderType === "TAKEAWAY" ? "var(--bg-primary)" : "white",
+                  color: orderType === "TAKEAWAY" ? "var(--accent)" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  transition: "0.2s"
+                }}
+              >
+                MANG ĐI
+              </button>
+              <button
+                onClick={() => {
+                  setOrderType("DINE_IN");
+                  // Show table selection modal by ensuring isCartOpen is true and orderType is DINE_IN
+                  setIsCartOpen(true);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 12,
+                  fontWeight: 900,
+                  fontSize: 13,
+                  border: orderType === "DINE_IN" ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  background: orderType === "DINE_IN" ? "var(--bg-primary)" : "white",
+                  color: orderType === "DINE_IN" ? "var(--accent)" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  transition: "0.2s"
+                }}
+              >
+                TẠI CHỖ {selectedTableId && `(${tables.find(t => t.id === selectedTableId)?.name || '...' })`}
               </button>
             </div>
 
@@ -261,6 +366,95 @@ export default function POSPage() {
           </div>
         </div>
       )}
+
+      {/* Order Type & Table Selection Modal */}
+      {isCartOpen && orderType === "DINE_IN" && !selectedTableId && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, backdropFilter: "blur(6px)" }}>
+          <div style={{ background: "white", padding: 32, borderRadius: 32, maxWidth: 600, width: "95%", boxShadow: "var(--shadow-lg)" }} className="animate-fade-in">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h3 style={{ fontSize: 22, fontWeight: 900 }}>Chọn bàn</h3>
+              <button onClick={() => { setOrderType("TAKEAWAY"); setSelectedTableId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}><HiX size={24} /></button>
+            </div>
+
+            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--text-muted)", marginBottom: 16 }}>Bấm vào bàn Trống để mở đơn mới, hoặc bàn Đang dùng để Gọi thêm món.</p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 12, marginBottom: 24, maxHeight: "400px", overflowY: "auto" }} className="custom-scroll">
+              {tables.map((table) => {
+                const isOccupied = table.status === 'OCCUPIED';
+                return (
+                  <button
+                    key={table.id}
+                    onClick={() => {
+                      if (isOccupied) {
+                        setShowTableActionModal(table);
+                      } else {
+                        setSelectedTableId(table.id);
+                        setActiveOrderId(null);
+                      }
+                    }}
+                    style={{
+                      padding: "20px 12px",
+                      borderRadius: 16,
+                      border: selectedTableId === table.id ? "2px solid #10b981" : "1px solid var(--border)",
+                      background: isOccupied ? "#fef2f2" : (selectedTableId === table.id ? "#d1fae5" : "white"),
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "0.2s",
+                      textAlign: "center"
+                    }}
+                  >
+                    <div style={{ fontSize: 16, marginBottom: 4 }}>{table.name}</div>
+                    <div style={{ fontSize: 10, color: isOccupied ? "var(--danger)" : "var(--success)" }}>
+                      {isOccupied ? "ĐANG DÙNG" : "TRỐNG"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table Action Modal (Occupied Table) */}
+      {showTableActionModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600, backdropFilter: "blur(6px)" }}>
+          <div style={{ background: "white", padding: 32, borderRadius: 32, maxWidth: 400, width: "90%", boxShadow: "var(--shadow-lg)", textAlign: "center" }} className="animate-fade-in">
+            <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 12 }}>Bàn {showTableActionModal.name}</h3>
+            <p style={{ color: "var(--text-secondary)", fontWeight: 700, marginBottom: 24 }}>Bàn này đang có khách sử dụng hóa đơn <span style={{ color: "var(--accent)" }}>{showTableActionModal.current_order?.order_number}</span></p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <button
+                onClick={() => {
+                  setSelectedTableId(showTableActionModal.id);
+                  setActiveOrderId(showTableActionModal.current_order?.id || null);
+                  setShowTableActionModal(null);
+                  notify("Đã chuyển sang chế độ Gọi thêm món cho bàn " + showTableActionModal.name);
+                }}
+                style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}
+              >
+                GỌI THÊM MÓN
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = `/tables?id=${showTableActionModal.id}`;
+                }}
+                style={{ width: "100%", padding: 16, background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}
+              >
+                XEM CHI TIẾT BILL
+              </button>
+              <button onClick={() => setShowTableActionModal(null)} style={{ width: "100%", padding: 12, background: "none", border: "none", color: "var(--text-muted)", fontWeight: 800, cursor: "pointer" }}>HỦY</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notify helper (if not defined elsewhere) */}
+      <style jsx>{`
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+      `}</style>
+
+
 
       {/* Topping Selection Modal - UPGRADED WITH STEPPER */}
       {activeProduct && (
@@ -303,23 +497,23 @@ export default function POSPage() {
         <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400 }}>
           <div style={{ textAlign: "center", padding: "40px", background: "white", borderRadius: 32, border: "1px solid var(--border)", maxWidth: 460, width: "100%" }} className="animate-fade-in">
             {orderSuccess.payment_method === "BANK_TRANSFER" ? (
-               <div style={{ marginBottom: 24 }}>
-                 <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 16 }}>QUÉT MÃ THANH TOÁN</h2>
-                 <div style={{ background: "white", padding: 16, borderRadius: 24, border: "2px solid var(--border)", display: "inline-block", marginBottom: 16 }}>
-                   <img src={`https://img.vietqr.io/image/techcombank-19038133016013-print.jpg?amount=${orderSuccess.final_amount}&addInfo=Thanh toan don hang ${orderSuccess.order_number}&accountName=Nguyen Trong Triet`} alt="QR Code" style={{ width: 280, height: "auto", borderRadius: 12 }} />
-                 </div>
-                 <p style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", marginBottom: 4 }}>{formatVND(orderSuccess.final_amount)}</p>
-                 <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 700 }}>{orderSuccess.order_number}</p>
-                 <div style={{ fontSize: 12, fontWeight: 800, color: "var(--success)", background: "rgba(34,197,94,0.1)", padding: "10px 16px", borderRadius: 12, marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    <HiCheckCircle size={18} /> Chờ khách quét mã để hoàn tất đơn
-                 </div>
-               </div>
+              <div style={{ marginBottom: 24 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 16 }}>QUÉT MÃ THANH TOÁN</h2>
+                <div style={{ background: "white", padding: 16, borderRadius: 24, border: "2px solid var(--border)", display: "inline-block", marginBottom: 16 }}>
+                  <img src={`https://img.vietqr.io/image/techcombank-19038133016013-print.jpg?amount=${orderSuccess.final_amount}&addInfo=Thanh toan don hang ${orderSuccess.order_number}&accountName=Nguyen Trong Triet`} alt="QR Code" style={{ width: 280, height: "auto", borderRadius: 12 }} />
+                </div>
+                <p style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", marginBottom: 4 }}>{formatVND(orderSuccess.final_amount)}</p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 700 }}>{orderSuccess.order_number}</p>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "var(--success)", background: "rgba(34,197,94,0.1)", padding: "10px 16px", borderRadius: 12, marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <HiCheckCircle size={18} /> Chờ khách quét mã để hoàn tất đơn
+                </div>
+              </div>
             ) : (
-               <>
-                 <HiCheckCircle size={80} color="var(--success)" style={{ margin: "0 auto 24px" }} />
-                 <h2 style={{ fontSize: 26, fontWeight: 900 }}>THANH TOÁN XONG</h2>
-                 <p style={{ fontSize: 22, fontWeight: 900, color: "var(--accent)", margin: "20px 0 40px", fontFamily: "monospace" }}>{orderSuccess.order_number}</p>
-               </>
+              <>
+                <HiCheckCircle size={80} color="var(--success)" style={{ margin: "0 auto 24px" }} />
+                <h2 style={{ fontSize: 26, fontWeight: 900 }}>THANH TOÁN XONG</h2>
+                <p style={{ fontSize: 22, fontWeight: 900, color: "var(--accent)", margin: "20px 0 40px", fontFamily: "monospace" }}>{orderSuccess.order_number}</p>
+              </>
             )}
             <button onClick={() => { setOrderSuccess(null); setPaymentMethod("CASH"); }} className="btn-primary" style={{ width: "100%", padding: 18 }}>ĐƠN HÀNG MỚI</button>
           </div>

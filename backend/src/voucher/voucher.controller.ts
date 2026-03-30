@@ -40,4 +40,10 @@ export class VoucherController {
   async getStats() {
     return this.voucherService.getStats();
   }
+
+  @Get('employee/:id')
+  @ApiOperation({ summary: 'Get employee details & balance' })
+  async getEmployee(@Param('id') id: string) {
+    return this.voucherService.getEmployee(id);
+  }
 }

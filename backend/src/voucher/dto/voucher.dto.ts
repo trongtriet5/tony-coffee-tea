@@ -15,6 +15,11 @@ export class CreateVoucherDto {
   @IsString()
   @IsOptional()
   voucher_type?: string;
+
+  @ApiProperty({ example: 'MAYCHA', enum: ['MAYCHA', 'TAMHAO'], default: 'MAYCHA' })
+  @IsString()
+  @IsOptional()
+  brand?: string;
 }
 
 export class ApplyVoucherDto {

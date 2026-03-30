@@ -25,6 +25,27 @@ export class OrderService {
   ) {}
 
   async create(dto: CreateOrderDto) {
+    // Default order_type to TAKEAWAY if not provided
+    const orderType = dto.order_type || 'TAKEAWAY';
+
+    // Validate table_id for DINE_IN orders
+    let tableId: string | null = null;
+    if (orderType === 'DINE_IN') {
+      if (!dto.table_id) {
+        throw new BadRequestException('Table ID is required for dine-in orders');
+      }
+      const table = await this.prisma.table.findUnique({
+        where: { id: dto.table_id },
+      });
+      if (!table) {
+        throw new BadRequestException(`Table with id ${dto.table_id} not found`);
+      }
+      if (table.status !== 'AVAILABLE') {
+        throw new BadRequestException(`Table ${table.name} is not available`);
+      }
+      tableId = dto.table_id;
+    }
+
     const productIds = dto.items.map((i) => i.product_id);
     const allToppingIds = dto.items.flatMap((i) => i.topping_ids || []);
 
@@ -36,6 +57,17 @@ export class OrderService {
 
     const productMap = new Map<string, DbProduct>(products.map((p) => [p.id, p]));
     const toppingMap = new Map<string, DbTopping>(toppings.map((t) => [t.id, t]));
+
+    // Get recipes for material tracking
+    const productRecipes = await this.prisma.productRecipe.findMany({
+      where: { product_id: { in: productIds } },
+      include: { material: true },
+    });
+
+    const toppingRecipes = await this.prisma.toppingRecipe.findMany({
+      where: { topping_id: { in: allToppingIds } },
+      include: { material: true },
+    });
 
     let totalAmountVal = 0;
     const itemsData = dto.items.map((item) => {
@@ -80,6 +112,9 @@ export class OrderService {
           discount_amount: discountAmountVal,
           final_amount: finalAmountVal,
           payment_method: dto.payment_method,
+          status: orderType === 'DINE_IN' ? 'PENDING' : 'COMPLETED',
+          order_type: orderType,
+          table_id: tableId,
           items: {
             create: itemsData
           },
@@ -91,6 +126,63 @@ export class OrderService {
       if (voucherIds.length) {
         await tx.voucher.updateMany({ where: { id: { in: voucherIds } }, data: { status: 'USED', used_at: new Date() } });
       }
+
+      // Track material usage for each item
+      for (const item of dto.items) {
+        // Track product ingredients
+        const prodRecipes = productRecipes.filter((r) => r.product_id === item.product_id);
+        for (const recipe of prodRecipes) {
+          const quantityUsed = recipe.quantity * item.quantity;
+          
+          // Update material stock
+          await tx.material.update({
+            where: { id: recipe.material_id },
+            data: { stock_current: { decrement: quantityUsed } },
+          });
+
+          // Record transaction
+          await tx.materialTransaction.create({
+            data: {
+              material_id: recipe.material_id,
+              type: 'USED',
+              quantity: quantityUsed,
+              note: `Order ${order.order_number} - ${order.items.length} items`,
+            },
+          });
+        }
+
+        // Track topping ingredients
+        const toppingIds = item.topping_ids || [];
+        for (const toppingId of toppingIds) {
+          const toppingRecipesForItem = toppingRecipes.filter((r) => r.topping_id === toppingId);
+          for (const recipe of toppingRecipesForItem) {
+            const quantityUsed = recipe.quantity * item.quantity;
+
+            await tx.material.update({
+              where: { id: recipe.material_id },
+              data: { stock_current: { decrement: quantityUsed } },
+            });
+
+            await tx.materialTransaction.create({
+              data: {
+                material_id: recipe.material_id,
+                type: 'USED',
+                quantity: quantityUsed,
+                note: `Order ${order.order_number} - Topping`,
+              },
+            });
+          }
+        }
+      }
+
+      // Update table status to OCCUPIED for dine-in orders
+      if (tableId) {
+        await tx.table.update({
+          where: { id: tableId },
+          data: { status: 'OCCUPIED' },
+        });
+      }
+
       return order;
     });
   }
@@ -166,7 +258,7 @@ export class OrderService {
       }),
       p.order.findMany({
         where: { created_at: { gte: rangeStart, lte: rangeEnd } },
-        select: { created_at: true, items: { select: { quantity: true } } }
+        select: { created_at: true, items: { select: { quantity: true, toppings: true } } }
       })
     ]);
 
@@ -182,24 +274,38 @@ export class OrderService {
     }));
 
     // Hourly analysis - aggregated over the selected period
-    const hourlyMap: Record<string, number> = {};
-    for (let h = 8; h <= 23; h++) {
-        hourlyMap[h.toString().padStart(2, '0') + ':00'] = 0;
+    const hourlyMap: Record<string, { products: number; toppings: number }> = {};
+    for (let h = 0; h <= 23; h++) {
+        hourlyMap[h.toString().padStart(2, '0') + ':00'] = { products: 0, toppings: 0 };
     }
 
     ordersInPeriod.forEach((o: any) => {
+        // Use Intl.DateTimeFormat to force +7 (Asia/Ho_Chi_Minh) regardless of server timezone
         const d = new Date(o.created_at);
-        // Lấy chính xác giờ literal từ database (do Prisma query về dưới dạng UTC)
-        const hour = d.getUTCHours();
+        const hourStr = new Intl.DateTimeFormat('en-GB', {
+            hour: '2-digit',
+            hour12: false,
+            timeZone: 'Asia/Ho_Chi_Minh'
+        }).format(d);
+        
+        const hour = parseInt(hourStr, 10);
         const key = hour.toString().padStart(2, '0') + ':00';
         if (hourlyMap[key] !== undefined) {
-            const itemsInOrder = o.items.reduce((s: number, i: any) => s + i.quantity, 0);
-            hourlyMap[key] += itemsInOrder;
+            let pCount = 0;
+            let tCount = 0;
+            o.items.forEach((i: any) => {
+                pCount += i.quantity;
+                if (i.toppings && Array.isArray(i.toppings)) {
+                    tCount += (i.toppings.length * i.quantity);
+                }
+            });
+            hourlyMap[key].products += pCount;
+            hourlyMap[key].toppings += tCount;
         }
     });
 
     const transaction_count_by_hour = Object.entries(hourlyMap)
-        .map(([hour, count]) => ({ hour, count }))
+        .map(([hour, counts]) => ({ hour, products: counts.products, toppings: counts.toppings }))
         .sort((a, b) => a.hour.localeCompare(b.hour));
 
     // Revenue distribution by day over the range
@@ -209,12 +315,20 @@ export class OrderService {
     for (let i = 0; i <= daysDiff; i++) {
         const d = new Date(rangeStart);
         d.setDate(rangeStart.getDate() + i);
-        const key = d.toISOString().slice(0, 10);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const key = `${y}-${m}-${day}`;
         revenueMap[key] = 0;
     }
     
     allStatsInPeriod.forEach((o: any) => {
-      const dateKey = o.created_at.toISOString().slice(0, 10);
+      const d = new Date(o.created_at);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${y}-${m}-${day}`;
+      
       if (revenueMap[dateKey] !== undefined) revenueMap[dateKey] += o.final_amount;
     });
 
@@ -232,5 +346,112 @@ export class OrderService {
       top_products,
       transaction_count_by_hour
     };
+  }
+
+  async addItemsToOrder(orderId: string, items: any[], paymentMethod?: string) {
+    const existingOrder = await this.findOne(orderId);
+    if (!existingOrder) throw new NotFoundException(`Order ${orderId} not found`);
+
+    const productIds = items.map((i) => i.product_id);
+    const allToppingIds = items.flatMap((i) => i.topping_ids || []);
+
+    const p: any = this.prisma;
+    const products: DbProduct[] = await p.product.findMany({ where: { id: { in: productIds }, available: true } });
+    const toppings: DbTopping[] = await p.topping.findMany({ where: { id: { in: allToppingIds }, available: true } });
+
+    const productMap = new Map<string, DbProduct>(products.map((p) => [p.id, p]));
+    const toppingMap = new Map<string, DbTopping>(toppings.map((t) => [t.id, t]));
+
+    // Recipes for material tracking
+    const productRecipes = await this.prisma.productRecipe.findMany({
+      where: { product_id: { in: productIds } },
+      include: { material: true },
+    });
+    const toppingRecipes = await this.prisma.toppingRecipe.findMany({
+      where: { topping_id: { in: allToppingIds } },
+      include: { material: true },
+    });
+
+    let extraAmount = 0;
+    const itemsData = items.map((item) => {
+      const prod = productMap.get(item.product_id);
+      if (!prod) throw new BadRequestException(`Product ${item.product_id} not found`);
+
+      let itemSubtotal = prod.price * item.quantity;
+      const selectedToppings = (item.topping_ids || []).map((tid) => {
+         const t = toppingMap.get(tid);
+         if (!t) throw new BadRequestException(`Topping ${tid} not found`);
+         itemSubtotal += t.price * item.quantity;
+         return { topping_id: t.id, name: t.name, price: t.price };
+      });
+
+      extraAmount += itemSubtotal;
+      return {
+        product_id: prod.id,
+        quantity: item.quantity,
+        unit_price: prod.price,
+        subtotal: itemSubtotal,
+        toppings: { create: selectedToppings }
+      };
+    });
+
+    return this.prisma.$transaction(async (tx: any) => {
+      // Add items to existing order
+      for (const itemData of itemsData) {
+        await tx.orderItem.create({
+          data: {
+            ...itemData,
+            order_id: orderId
+          }
+        });
+      }
+
+      const newTotal = existingOrder.total_amount + extraAmount;
+      const newFinal = existingOrder.final_amount + extraAmount;
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          total_amount: newTotal,
+          final_amount: newFinal,
+          payment_method: paymentMethod || existingOrder.payment_method
+        }
+      });
+
+      // Track material usage
+      for (const item of items) {
+        const prodRecipes = productRecipes.filter((r) => r.product_id === item.product_id);
+        for (const recipe of prodRecipes) {
+          const quantityUsed = recipe.quantity * item.quantity;
+          await tx.material.update({
+            where: { id: recipe.material_id },
+            data: { stock_current: { decrement: quantityUsed } },
+          });
+          await tx.materialTransaction.create({
+            data: { material_id: recipe.material_id, type: 'USED', quantity: quantityUsed, note: `Add to Order ${existingOrder.order_number}` },
+          });
+        }
+
+        const toppingIds = item.topping_ids || [];
+        for (const toppingId of toppingIds) {
+          const toppingRecipesForItem = toppingRecipes.filter((r) => r.topping_id === toppingId);
+          for (const recipe of toppingRecipesForItem) {
+            const quantityUsed = recipe.quantity * item.quantity;
+            await tx.material.update({
+              where: { id: recipe.material_id },
+              data: { stock_current: { decrement: quantityUsed } },
+            });
+            await tx.materialTransaction.create({
+              data: { material_id: recipe.material_id, type: 'USED', quantity: quantityUsed, note: `Add to Order ${existingOrder.order_number} - Topping` },
+            });
+          }
+        }
+      }
+
+      return tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { product: true, toppings: true } }, vouchers: true }
+      });
+    });
   }
 }

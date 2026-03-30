@@ -44,4 +44,14 @@ export class OrderController {
   async findOne(@Param('id') id: string) {
     return this.orderService.findOne(id);
   }
+
+  @Post(':id/items')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add items to an existing order' })
+  async addItems(
+    @Param('id') id: string,
+    @Body() body: { items: any[], payment_method?: string }
+  ) {
+    return this.orderService.addItemsToOrder(id, body.items, body.payment_method);
+  }
 }

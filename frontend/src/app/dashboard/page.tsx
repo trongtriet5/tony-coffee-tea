@@ -307,8 +307,8 @@ export default function DashboardPage() {
       {/* TRANSACTION COUNT ANALYZE (HOURLY) */}
       <div style={{ marginTop: 32, background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "48px" }}>
         <div style={{ marginBottom: 40 }}>
-          <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Peak Hour Analyze</h3>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700 }}>Tổng hợp lưu lượng bán ra theo khung giờ trong giai đoạn chọn</p>
+          <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Total Product Sold</h3>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700 }}>Tổng hợp lưu lượng bán ra (sản phẩm và topping) theo khung giờ</p>
         </div>
 
         <div style={{ height: 320, width: "100%" }}>
@@ -316,36 +316,57 @@ export default function DashboardPage() {
             <Bar
               data={{
                 labels: stats.transaction_count_by_hour.map(h => h.hour),
-                datasets: [{
-                  label: 'Sản lượng',
-                  data: stats.transaction_count_by_hour.map(h => h.count),
-                  backgroundColor: (context: any) => {
-                    const ctx = context.chart.ctx;
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
-                    gradient.addColorStop(0, '#f2d45c');
-                    gradient.addColorStop(1, '#caa21a');
-                    return gradient;
+                datasets: [
+                  {
+                    label: 'Sản phẩm',
+                    data: stats.transaction_count_by_hour.map(h => h.products),
+                    backgroundColor: (context: any) => {
+                      const ctx = context.chart.ctx;
+                      const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+                      gradient.addColorStop(0, '#f2d45c');
+                      gradient.addColorStop(1, '#caa21a');
+                      return gradient;
+                    },
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.5
                   },
-                  borderRadius: 6,
-                  borderWidth: 0,
-                  barPercentage: 0.6,
-                  categoryPercentage: 0.8
-                }]
+                  {
+                    label: 'Topping',
+                    data: stats.transaction_count_by_hour.map(h => h.toppings),
+                    backgroundColor: '#e5e7eb',
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.5
+                  }
+                ]
               }}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { display: false },
+                  legend: { 
+                    display: true,
+                    position: 'top',
+                    align: 'center',
+                    labels: { 
+                      font: { family: 'inherit', size: 11, weight: 800 }, 
+                      color: 'var(--text-primary)', 
+                      usePointStyle: true,
+                      padding: 24 // Padding around the legend items to push them away from data labels
+                    }
+                  },
                   datalabels: {
-                    color: '#caa21a',
+                    color: (ctx: any) => ctx.datasetIndex === 0 ? '#caa21a' : '#888',
                     anchor: 'end',
                     align: 'top',
                     font: { weight: 900, size: 10 },
                     formatter: (v: any) => v > 0 ? v : '',
                     display: 'auto'
                   },
-                  tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, callbacks: { label: (c: any) => `${c.raw} món` } }
+                  tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, callbacks: { label: (c: any) => `${c.raw} ${c.datasetIndex === 0 ? 'món' : 'topping'}` } }
                 },
                 scales: {
                   y: {
