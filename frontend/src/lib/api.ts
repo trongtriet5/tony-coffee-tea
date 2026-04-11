@@ -1,12 +1,36 @@
 import axios from 'axios';
 import type {
-  Product, Topping, Voucher, Order, DashboardStats, VoucherStats, 
+  Product, Topping, Order, DashboardStats, 
   PaginatedResponse, PaymentMethod, OrderType, TableStatus, Table
 } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({ baseURL: BASE_URL, headers: { 'Content-Type': 'application/json' } });
+
+// Add interceptor to attach token
+api.interceptors.request.use((config) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
+// Add interceptor to handle 401 Unauthorized
+api.interceptors.response.use((response) => response, (error) => {
+  if (error.response?.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
+  }
+  return Promise.reject(error);
+});
+
+export const login = (username: string, password: string): Promise<any> => 
+  api.post('/auth/login', { username, password }).then((r) => r.data);
 
 // ============== Products & Toppings ==============
 export const getProducts = (params?: { all?: boolean }): Promise<Product[]> => api.get('/products', { params }).then((r) => r.data);
@@ -17,27 +41,32 @@ export const getToppings = (params?: { all?: boolean }): Promise<Topping[]> => a
 export const createTopping = (data: Omit<Topping, 'id'>): Promise<Topping> => api.post('/products/toppings', data).then((r) => r.data);
 export const updateTopping = (id: string, data: Partial<Topping>): Promise<Topping> => api.put(`/products/toppings/${id}`, data).then((r) => r.data);
 
-// ============== Vouchers ==============
-export const createVoucher = (data: { employee_id: string; amount: number; voucher_type?: string }) => api.post('/voucher/create', data).then((r) => r.data);
-export const getVoucherStatus = (code: string): Promise<Voucher> => api.get(`/voucher/status/${code}`).then((r) => r.data);
-export const validateVoucher = (code: string): Promise<Voucher> => api.get(`/voucher/validate/${code}`).then((r) => r.data);
-export const getVouchers = (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Voucher>> => api.get('/voucher', { params }).then((r) => r.data);
-export const getVoucherStats = (): Promise<VoucherStats> => api.get('/voucher/stats').then((r) => r.data);
 
 // ============== Orders ==============
 export interface CreateOrderPayload {
-  items: { product_id: string; quantity: number; topping_ids?: string[]; note?: string }[];
-  voucher_codes?: string[];
+  branch_id: string;
+  items: { product_id: string; variant_id?: string; quantity: number; topping_ids?: string[]; note?: string }[];
   payment_method: string;
   order_type?: 'TAKEAWAY' | 'DINE_IN';
   table_id?: string;
 }
 
 export const createOrder = (data: CreateOrderPayload): Promise<Order> => api.post('/orders', data).then((r) => r.data);
-export const getOrders = (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
+export const getOrders = (params?: { branch_id?: string; page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
 export const getOrder = (id: string): Promise<Order> => api.get(`/orders/${id}`).then((r) => r.data);
+export const getBranches = (): Promise<any[]> => api.get('/branches').then((r) => r.data);
+export const createBranch = (data: any): Promise<any> => api.post('/branches', data).then((r) => r.data);
+export const updateBranch = (id: string, data: any): Promise<any> => api.patch(`/branches/${id}`, data).then((r) => r.data);
+export const deleteBranch = (id: string): Promise<any> => api.delete(`/branches/${id}`).then((r) => r.data);
+
+export const getEmployees = (): Promise<any[]> => api.get('/employees').then((r) => r.data);
+export const createEmployee = (data: any): Promise<any> => api.post('/employees', data).then((r) => r.data);
+export const updateEmployee = (id: string, data: any): Promise<any> => api.patch(`/employees/${id}`, data).then((r) => r.data);
+export const deleteEmployee = (id: string): Promise<any> => api.delete(`/employees/${id}`).then((r) => r.data);
+
 export const addItemsToOrder = (id: string, items: any[], paymentMethod?: string): Promise<Order> => api.post(`/orders/${id}/items`, { items, payment_method: paymentMethod }).then((r) => r.data);
-export const getDashboardStats = (params?: { startDate?: string; endDate?: string }): Promise<DashboardStats> => api.get('/orders/dashboard', { params }).then((r) => r.data);
+export const getDashboardStats = (params?: { branch_id?: string; startDate?: string; endDate?: string }): Promise<DashboardStats> => api.get('/orders/dashboard', { params }).then((r) => r.data);
+export const reprintOrder = (id: string): Promise<Order> => api.post(`/orders/${id}/reprint`).then((r) => r.data);
 
 // ============== Materials & Inventory ==============
 export interface Material {
@@ -66,6 +95,13 @@ export const deleteMaterial = (id: string): Promise<void> => api.delete(`/materi
 export const addMaterialTransaction = (data: { material_id: string; type: 'IN' | 'OUT' | 'ADJUST' | 'USED'; quantity: number; note?: string }): Promise<any> => api.post('/materials/transactions/add', data).then((r) => r.data);
 export const getMaterialTransactions = (id: string, limit?: number): Promise<MaterialTransaction[]> => api.get(`/materials/${id}/transactions`, { params: { limit } }).then((r) => r.data);
 export const getInventoryReport = (params?: { startDate?: string; endDate?: string }): Promise<any> => api.get('/materials/reports/inventory', { params }).then((r) => r.data);
+export const exportMaterialsExcel = (branchId?: string): string => `${BASE_URL}/materials/export/excel${branchId ? `?branch_id=${branchId}` : ''}`;
+export const getMaterialTemplateUrl = (): string => `${BASE_URL}/materials/export/template`;
+export const importMaterials = (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/materials/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};
 
 // ============== Recipes (BOM) ==============
 export interface Recipe {
@@ -86,16 +122,24 @@ export const getToppingRecipes = (toppingId: string): Promise<any[]> => api.get(
 export const updateToppingRecipe = (id: string, quantity: number): Promise<any> => api.put(`/recipes/toppings/${id}`, { quantity }).then((r) => r.data);
 export const deleteToppingRecipe = (id: string): Promise<void> => api.delete(`/recipes/toppings/${id}`).then((r) => r.data);
 
+export const exportRecipesExcel = (): string => `${BASE_URL}/recipes/export/excel`;
+export const getRecipeTemplateUrl = (): string => `${BASE_URL}/recipes/export/template`;
+export const importRecipes = (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/recipes/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};
+
 // (Table interface is now imported from types/index.ts)
 
-export const getTables = (): Promise<Table[]> => api.get('/tables').then((r) => r.data);
-export const getAvailableTables = (): Promise<Table[]> => api.get('/tables/available').then((r) => r.data);
-export const createTable = (data: { name: string }): Promise<Table> => api.post('/tables', data).then((r) => r.data);
+export const getTables = (branchId?: string): Promise<Table[]> => api.get('/tables', { params: { branch_id: branchId } }).then((r) => r.data);
+export const getAvailableTables = (branchId?: string): Promise<Table[]> => api.get('/tables/available', { params: { branch_id: branchId } }).then((r) => r.data);
+export const createTable = (data: { name: string; branch_id?: string }): Promise<Table> => api.post('/tables', data).then((r) => r.data);
 export const updateTable = (id: string, data: Partial<Table>): Promise<Table> => api.put(`/tables/${id}`, data).then((r) => r.data);
 export const deleteTable = (id: string): Promise<void> => api.delete(`/tables/${id}`).then((r) => r.data);
 export const occupyTable = (id: string): Promise<Table> => api.post(`/tables/${id}/occupy`, {}).then((r) => r.data);
 export const releaseTable = (id: string): Promise<Table> => api.post(`/tables/${id}/release`, {}).then((r) => r.data);
-export const getTableOccupancy = (): Promise<any> => api.get('/tables/occupancy-status').then((r) => r.data);
+export const getTableOccupancy = (branchId?: string): Promise<any> => api.get('/tables/occupancy-status', { params: { branch_id: branchId } }).then((r) => r.data);
 
 export default api;
 

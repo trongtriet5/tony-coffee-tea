@@ -5,6 +5,9 @@ export class CreateMaterialDto {
   name: string;
 
   @IsString()
+  branch_id: string; // Required for multi-branch
+
+  @IsString()
   unit: string; // g, ml, cái, kg, lít, etc.
 
   @IsNumber()
@@ -27,6 +30,10 @@ export class UpdateMaterialDto {
   @IsOptional()
   @IsNumber()
   cost_per_unit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  stock_current?: number; // Added for manual update fix
 }
 
 export class MaterialTransactionDto {

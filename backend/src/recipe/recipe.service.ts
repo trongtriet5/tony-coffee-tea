@@ -1,114 +1,89 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateProductRecipeDto,
-  CreateToppingRecipeDto,
-  ProductRecipeResponseDto,
-  ToppingRecipeResponseDto,
-} from './dto/recipe.dto';
+import { CreateProductRecipeDto, CreateToppingRecipeDto } from './dto/recipe.dto';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class RecipeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // Product Recipe Management
-  async createProductRecipe(dto: CreateProductRecipeDto): Promise<ProductRecipeResponseDto> {
-    // Verify product and material exist
-    const [product, material] = await Promise.all([
-      this.prisma.product.findUnique({ where: { id: dto.product_id } }),
-      this.prisma.material.findUnique({ where: { id: dto.material_id } }),
-    ]);
-
-    if (!product) throw new NotFoundException(`Product with id ${dto.product_id} not found`);
-    if (!material) throw new NotFoundException(`Material with id ${dto.material_id} not found`);
-
-    // Check if recipe already exists
-    const existing = await this.prisma.productRecipe.findFirst({
-      where: {
-        product_id: dto.product_id,
-        material_id: dto.material_id,
-      },
-    });
-
-    if (existing) {
-      throw new BadRequestException(
-        `Recipe for product and material already exists. Use update instead.`,
-      );
-    }
-
-    const recipe = await this.prisma.productRecipe.create({
+  // ============== Product Recipes ==============
+  async createProductRecipe(dto: CreateProductRecipeDto) {
+    return this.prisma.productRecipe.create({
       data: {
-        product_id: dto.product_id,
+        variant_id: dto.variant_id,
         material_id: dto.material_id,
         quantity: dto.quantity,
       },
       include: {
-        product: true,
+        variant: {
+          include: {
+            product: true,
+          }
+        },
         material: true,
       },
     });
-
-    return this.formatProductRecipeResponse(recipe);
   }
 
-  async getProductRecipesByProduct(productId: string): Promise<ProductRecipeResponseDto[]> {
-    const recipes = await this.prisma.productRecipe.findMany({
-      where: { product_id: productId },
+  async findProductRecipes(variantId: string) {
+    return this.prisma.productRecipe.findMany({
+      where: { variant_id: variantId },
       include: {
-        product: true,
+        variant: {
+          include: {
+            product: true,
+          }
+        },
         material: true,
       },
     });
-
-    return recipes.map((r) => this.formatProductRecipeResponse(r));
   }
 
-  async updateProductRecipe(
-    id: string,
-    quantity: number,
-  ): Promise<ProductRecipeResponseDto> {
-    const recipe = await this.prisma.productRecipe.update({
-      where: { id },
-      data: { quantity },
-      include: {
-        product: true,
-        material: true,
-      },
-    });
-
-    return this.formatProductRecipeResponse(recipe);
-  }
-
-  async deleteProductRecipe(id: string): Promise<void> {
-    await this.prisma.productRecipe.delete({ where: { id } });
-  }
-
-  // Topping Recipe Management
-  async createToppingRecipe(dto: CreateToppingRecipeDto): Promise<ToppingRecipeResponseDto> {
-    // Verify topping and material exist
-    const [topping, material] = await Promise.all([
-      this.prisma.topping.findUnique({ where: { id: dto.topping_id } }),
-      this.prisma.material.findUnique({ where: { id: dto.material_id } }),
-    ]);
-
-    if (!topping) throw new NotFoundException(`Topping with id ${dto.topping_id} not found`);
-    if (!material) throw new NotFoundException(`Material with id ${dto.material_id} not found`);
-
-    // Check if recipe already exists
-    const existing = await this.prisma.toppingRecipe.findFirst({
+  async findProductRecipesByProduct(productId: string) {
+    return this.prisma.productRecipe.findMany({
       where: {
-        topping_id: dto.topping_id,
-        material_id: dto.material_id,
+        variant: {
+          product_id: productId,
+        },
+      },
+      include: {
+        variant: {
+          include: {
+            product: true,
+          }
+        },
+        material: true,
       },
     });
+  }
 
-    if (existing) {
-      throw new BadRequestException(
-        `Recipe for topping and material already exists. Use update instead.`,
-      );
-    }
+  async updateProductRecipe(id: string, dto: Partial<CreateProductRecipeDto>) {
+    return this.prisma.productRecipe.update({
+      where: { id },
+      data: {
+        variant_id: dto.variant_id,
+        material_id: dto.material_id,
+        quantity: dto.quantity,
+      },
+      include: {
+        variant: {
+          include: {
+            product: true,
+          }
+        },
+        material: true,
+      },
+    });
+  }
 
-    const recipe = await this.prisma.toppingRecipe.create({
+  async deleteProductRecipe(id: string) {
+    return this.prisma.productRecipe.delete({ where: { id } });
+  }
+
+  // ============== Topping Recipes ==============
+  async createToppingRecipe(dto: CreateToppingRecipeDto) {
+    return this.prisma.toppingRecipe.create({
       data: {
         topping_id: dto.topping_id,
         material_id: dto.material_id,
@@ -119,94 +94,270 @@ export class RecipeService {
         material: true,
       },
     });
-
-    return this.formatToppingRecipeResponse(recipe);
   }
 
-  async getToppingRecipesByTopping(toppingId: string): Promise<ToppingRecipeResponseDto[]> {
-    const recipes = await this.prisma.toppingRecipe.findMany({
+  async findToppingRecipes(toppingId: string) {
+    return this.prisma.toppingRecipe.findMany({
       where: { topping_id: toppingId },
       include: {
         topping: true,
         material: true,
       },
     });
-
-    return recipes.map((r) => this.formatToppingRecipeResponse(r));
   }
 
-  async updateToppingRecipe(id: string, quantity: number): Promise<ToppingRecipeResponseDto> {
-    const recipe = await this.prisma.toppingRecipe.update({
+  async updateToppingRecipe(id: string, dto: Partial<CreateToppingRecipeDto>) {
+    return this.prisma.toppingRecipe.update({
       where: { id },
-      data: { quantity },
+      data: {
+        topping_id: dto.topping_id,
+        material_id: dto.material_id,
+        quantity: dto.quantity,
+      },
       include: {
         topping: true,
         material: true,
       },
     });
-
-    return this.formatToppingRecipeResponse(recipe);
   }
 
-  async deleteToppingRecipe(id: string): Promise<void> {
-    await this.prisma.toppingRecipe.delete({ where: { id } });
+  async deleteToppingRecipe(id: string) {
+    return this.prisma.toppingRecipe.delete({ where: { id } });
   }
 
-  // Get all recipes for a product including toppings
-  async getCompleteProductRecipe(productId: string): Promise<any> {
-    const product = await this.prisma.product.findUnique({
-      where: { id: productId },
+  // ============== Cost Analysis ==============
+  async getProductCost(variantId: string) {
+    const recipes = await this.prisma.productRecipe.findMany({
+      where: { variant_id: variantId },
+      include: {
+        material: true,
+        variant: {
+          include: {
+            product: true
+          }
+        }
+      },
     });
 
-    if (!product) {
-      throw new NotFoundException(`Product with id ${productId} not found`);
+    if (recipes.length === 0) {
+      // If no recipe, maybe at least find the product to return 0 cost
+      const variant = await this.prisma.productVariant.findUnique({
+        where: { id: variantId },
+        include: { product: true }
+      });
+      if (!variant) throw new NotFoundException('Sản phẩm không tồn tại');
+      
+      return {
+        product_id: variant.product.id,
+        product_name: variant.product.name_vi,
+        variant_id: variant.id,
+        variant_size: variant.size,
+        total_cost: 0,
+        materials: [],
+      };
     }
 
-    const recipes = await this.prisma.productRecipe.findMany({
-      where: { product_id: productId },
-      include: { material: true },
+    const first = recipes[0];
+    const materials = recipes.map((r) => ({
+      material_id: r.material_id,
+      material_name: r.material.name,
+      unit: r.material.unit,
+      quantity: r.quantity,
+      cost_per_unit: r.material.cost_per_unit,
+      total_cost: r.quantity * r.material.cost_per_unit,
+    }));
+
+    const totalCost = materials.reduce((sum, m) => sum + m.total_cost, 0);
+
+    return {
+      product_id: first.variant.product.id,
+      product_name: first.variant.product.name_vi,
+      variant_id: first.variant.id,
+      variant_size: first.variant.size,
+      total_cost: totalCost,
+      materials,
+    };
+  }
+
+  async getToppingCost(toppingId: string) {
+    const recipes = await this.prisma.toppingRecipe.findMany({
+      where: { topping_id: toppingId },
+      include: {
+        material: true,
+        topping: true,
+      },
     });
 
+    if (recipes.length === 0) {
+      const topping = await this.prisma.topping.findUnique({ where: { id: toppingId } });
+      if (!topping) throw new NotFoundException('Topping không tồn tại');
+      return {
+        topping_id: topping.id,
+        topping_name: topping.name,
+        total_cost: 0,
+        materials: [],
+      };
+    }
+
+    const first = recipes[0];
+    const materials = recipes.map((r) => ({
+      material_id: r.material_id,
+      material_name: r.material.name,
+      unit: r.material.unit,
+      quantity: r.quantity,
+      cost_per_unit: r.material.cost_per_unit,
+      total_cost: r.quantity * r.material.cost_per_unit,
+    }));
+
+    const totalCost = materials.reduce((sum, m) => sum + m.total_cost, 0);
+
     return {
-      product: {
-        id: product.id,
-        name_vi: product.name_vi,
-        name_en: product.name_en,
-        price: product.price,
-      },
-      materials: recipes.map((r) => ({
-        id: r.id,
-        material_id: r.material_id,
-        material_name: r.material.name,
-        unit: r.material.unit,
-        quantity_needed: r.quantity,
-        cost_per_unit: r.material.cost_per_unit,
-        total_cost: r.quantity * r.material.cost_per_unit,
-      })),
+      topping_id: first.topping.id,
+      topping_name: first.topping.name,
+      total_cost: totalCost,
+      materials,
     };
   }
 
-  private formatProductRecipeResponse(recipe: any): ProductRecipeResponseDto {
-    return {
-      id: recipe.id,
-      product_id: recipe.product_id,
-      product_name: recipe.product.name_vi,
-      material_id: recipe.material_id,
-      material_name: recipe.material.name,
-      material_unit: recipe.material.unit,
-      quantity: recipe.quantity,
-    };
+  // --- IMPORT / EXPORT METHODS ---
+
+  async generateTemplate(): Promise<Buffer> {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Product Recipes
+    const prodData = [
+      ['Tên món', 'Size', 'Tên nguyên liệu', 'Số lượng sử dụng'],
+      ['Cafe sữa đá', 'M', 'Cà phê hạt', 50],
+      ['Cafe sữa đá', 'M', 'Sữa đặc', 1],
+      ['Trà đào', 'L', 'Trà ô long', 15],
+    ];
+    const wsProd = XLSX.utils.aoa_to_sheet(prodData);
+    XLSX.utils.book_append_sheet(wb, wsProd, 'Món chính');
+
+    // Sheet 2: Topping Recipes
+    const topData = [
+      ['Tên topping', 'Tên nguyên liệu', 'Số lượng sử dụng'],
+      ['Trân châu trắng', 'Bột năng', 30],
+      ['Thạch đào', 'Bột thạch', 10],
+    ];
+    const wsTop = XLSX.utils.aoa_to_sheet(topData);
+    XLSX.utils.book_append_sheet(wb, wsTop, 'Toppings');
+
+    // Sheet 3: Guide
+    const guideData = [
+      ['Tên sheet', 'Cột', 'Mô tả', 'Lưu ý'],
+      ['Món chính', 'Tên món', 'Tên trong hệ thống (phải khớp 100%)', 'Tên tiếng Việt'],
+      ['Món chính', 'Size', 'S, M, L... (phải khớp)', 'Viết hoa'],
+      ['Món chính', 'Tên nguyên liệu', 'Tên trong Vật tư (phải khớp)', ''],
+      ['Món chính', 'Số lượng', 'Lượng trừ kho khi bán 1 món', 'Số'],
+      ['Toppings', 'Tên topping', 'Tên trong hệ thống (phải khớp)', ''],
+    ];
+    const wsGuide = XLSX.utils.aoa_to_sheet(guideData);
+    XLSX.utils.book_append_sheet(wb, wsGuide, 'Hướng dẫn');
+
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   }
 
-  private formatToppingRecipeResponse(recipe: any): ToppingRecipeResponseDto {
-    return {
-      id: recipe.id,
-      topping_id: recipe.topping_id,
-      topping_name: recipe.topping.name,
-      material_id: recipe.material_id,
-      material_name: recipe.material.name,
-      material_unit: recipe.material.unit,
-      quantity: recipe.quantity,
-    };
+  async importRecipes(buffer: Buffer): Promise<any> {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    
+    // Process Products
+    const prodSheet = workbook.Sheets['Món chính'];
+    const toppingSheet = workbook.Sheets['Toppings'];
+    
+    const results = { products: 0, toppings: 0, errors: [] as string[] };
+
+    if (prodSheet) {
+      const data: any[] = XLSX.utils.sheet_to_json(prodSheet);
+      for (const row of data) {
+        const prodName = row['Tên món'];
+        const size = row['Size'];
+        const matName = row['Tên nguyên liệu'];
+        const qty = parseFloat(row['Số lượng sử dụng']);
+
+        if (!prodName || !size || !matName || isNaN(qty)) continue;
+
+        try {
+          const variant = await this.prisma.productVariant.findFirst({
+            where: { size, product: { name_vi: prodName } }
+          });
+          const material = await this.prisma.material.findFirst({ where: { name: matName } });
+
+          if (!variant) throw new Error(`Không tìm thấy món "${prodName}" size ${size}`);
+          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matName}"`);
+
+          const existingRecipe = await this.prisma.productRecipe.findFirst({ where: { variant_id: variant.id, material_id: material.id } });
+
+          await this.prisma.productRecipe.upsert({
+            where: { id: existingRecipe?.id || 'none' },
+            update: { quantity: qty },
+            create: { variant_id: variant.id, material_id: material.id, quantity: qty }
+          });
+          results.products++;
+        } catch (err) {
+          results.errors.push(`Món chính - ${prodName}: ${err.message}`);
+        }
+      }
+    }
+
+    if (toppingSheet) {
+      const data: any[] = XLSX.utils.sheet_to_json(toppingSheet);
+      for (const row of data) {
+        const topName = row['Tên topping'];
+        const matName = row['Tên nguyên liệu'];
+        const qty = parseFloat(row['Số lượng sử dụng']);
+
+        if (!topName || !matName || isNaN(qty)) continue;
+
+        try {
+          const topping = await this.prisma.topping.findFirst({ where: { name: topName } });
+          const material = await this.prisma.material.findFirst({ where: { name: matName } });
+
+          if (!topping) throw new Error(`Không tìm thấy topping "${topName}"`);
+          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matName}"`);
+
+          const existingRecipe = await this.prisma.toppingRecipe.findFirst({ where: { topping_id: topping.id, material_id: material.id } });
+
+          await this.prisma.toppingRecipe.upsert({
+            where: { id: existingRecipe?.id || 'none' },
+            update: { quantity: qty },
+            create: { topping_id: topping.id, material_id: material.id, quantity: qty }
+          });
+          results.toppings++;
+        } catch (err) {
+          results.errors.push(`Toppings - ${topName}: ${err.message}`);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  async exportRecipes(): Promise<Buffer> {
+    const prodRecipes = await this.prisma.productRecipe.findMany({
+      include: { variant: { include: { product: true } }, material: true }
+    });
+    const topRecipes = await this.prisma.toppingRecipe.findMany({
+      include: { topping: true, material: true }
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    const pData = prodRecipes.map(r => ({
+      'Tên món': r.variant.product.name_vi,
+      'Size': r.variant.size,
+      'Tên nguyên liệu': r.material.name,
+      'Số lượng sử dụng': r.quantity
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pData), 'Món chính');
+
+    const tData = topRecipes.map(r => ({
+      'Tên topping': r.topping.name,
+      'Tên nguyên liệu': r.material.name,
+      'Số lượng sử dụng': r.quantity
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tData), 'Toppings');
+
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   }
 }

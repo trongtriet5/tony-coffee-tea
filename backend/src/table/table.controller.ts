@@ -8,33 +8,47 @@ import {
   Param,
   HttpStatus,
   HttpCode,
+  Query,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { TableService } from './table.service';
 import { CreateTableDto, UpdateTableDto } from './dto/table.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('tables')
 export class TableController {
   constructor(private tableService: TableService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createTable(@Body() dto: CreateTableDto) {
-    return this.tableService.createTable(dto);
+  async createTable(@Body() dto: CreateTableDto, @Request() req) {
+    const payload = { ...dto };
+    if (req.user.role !== 'ADMIN') {
+      payload.branch_id = req.user.branch_id;
+    }
+    return this.tableService.createTable(payload);
   }
 
   @Get()
-  async getAllTables() {
-    return this.tableService.getAllTables();
+  async getAllTables(@Request() req, @Query('branch_id') branchId?: string) {
+    const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
+    return this.tableService.getAllTables(bId);
   }
 
   @Get('available')
-  async getAvailableTables() {
-    return this.tableService.getAvailableTables();
+  async getAvailableTables(@Request() req, @Query('branch_id') branchId?: string) {
+    const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
+    return this.tableService.getAvailableTables(bId);
   }
 
   @Get('occupancy-status')
-  async getOccupancyStatus() {
-    return this.tableService.getTableOccupancyStatus();
+  async getOccupancyStatus(@Request() req, @Query('branch_id') branchId?: string) {
+    const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
+    return this.tableService.getTableOccupancyStatus(bId);
   }
 
   @Get(':id')

@@ -13,10 +13,24 @@ async function bootstrap() {
   // Enable CORS for frontend and mobile app
   const allowedOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',') 
-    : ['http://localhost:3000', 'http://localhost:3002'];
+    : [
+        'http://localhost:3000', 
+        'http://localhost:3002', 
+        'http://127.0.0.1:3000', 
+        'http://10.0.0.34:3000'
+      ];
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -38,7 +52,6 @@ async function bootstrap() {
     .setTitle('iPOS API')
     .setDescription('iPOS - F&B Point of Sale System API Documentation')
     .setVersion('1.0')
-    .addTag('vouchers', 'Voucher management endpoints')
     .addTag('orders', 'Order management endpoints')
     .addTag('products', 'Product management endpoints')
     .addTag('dashboard', 'Dashboard & analytics endpoints')

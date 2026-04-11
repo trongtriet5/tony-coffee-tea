@@ -1,11 +1,15 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getTables, createTable, updateTable, deleteTable, getTableOccupancy, occupyTable, releaseTable, getOrder } from "@/lib/api";
-import type { Table, Order } from "@/types";
+import { getTables, createTable, updateTable, deleteTable, getTableOccupancy, occupyTable, releaseTable, getOrder, getBranches } from "@/lib/api";
+import type { Table, Order, Branch } from "@/types";
 import { HiPlus, HiCheck, HiOutlineDesktopComputer, HiBan, HiTrash, HiOutlineShoppingCart } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from "@/components/ToastProvider";
 
 export default function TablesManagementPage() {
+  const currentUser = useCurrentUser();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [tables, setTables] = useState<Table[]>([]);
   const [occupancyStats, setOccupancyStats] = useState<any>(null);
 
@@ -15,22 +19,36 @@ export default function TablesManagementPage() {
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [orderLoading, setOrderLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [tableName, setTableName] = useState('');
   const [tableCount, setTableCount] = useState('');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentUser) {
+      getBranches().then((brs: Branch[]) => {
+        setBranches(brs);
+        if (currentUser.role !== 'ADMIN' && currentUser.branch_id) {
+          setSelectedBranchId(currentUser.branch_id);
+        } else if (brs.length > 0 && !selectedBranchId) {
+          setSelectedBranchId(brs[0].id);
+        }
+      });
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedBranchId && currentUser) fetchData();
+  }, [selectedBranchId, currentUser]);
 
   const fetchData = async () => {
     setFetchLoading(true);
     try {
       const [tablesData, occupancy] = await Promise.all([
-        getTables(),
-        getTableOccupancy(),
+        getTables(selectedBranchId),
+        getTableOccupancy(selectedBranchId),
       ]);
       setTables(tablesData);
       setOccupancyStats(occupancy);
@@ -49,10 +67,6 @@ export default function TablesManagementPage() {
     finally { setFetchLoading(false); }
   };
 
-  const notify = (msg: string) => {
-    setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(""), 3000);
-  };
 
   const handleSelectTable = async (table: Table) => {
     setSelectedTable(table);
@@ -81,19 +95,19 @@ export default function TablesManagementPage() {
       if (tableCount) {
         const count = parseInt(tableCount);
         for (let i = 1; i <= count; i++) {
-          await createTable({ name: `Bàn ${i}` });
+          await createTable({ name: `Bàn ${i}`, branch_id: selectedBranchId });
         }
-        notify(`Đã tạo ${count} bàn mới!`);
+        toastSuccess(`Đã tạo ${count} bàn mới!`);
       } else if (tableName) {
-        await createTable({ name: tableName });
-        notify(`Đã tạo bàn ${tableName}!`);
+        await createTable({ name: tableName, branch_id: selectedBranchId });
+        toastSuccess(`Đã tạo bàn ${tableName}!`);
       }
       setTableName('');
       setTableCount('');
       setShowAddForm(false);
       fetchData();
     } catch (err) {
-      alert("Lỗi khi thêm bàn");
+      toastError("Lỗi khi thêm bàn");
     } finally { setLoading(false); }
   };
 
@@ -102,14 +116,14 @@ export default function TablesManagementPage() {
     setLoading(true);
     try {
       await deleteTable(id);
-      notify("Đã xóa bàn");
+      toastSuccess("Đã xóa bàn");
       if (selectedTable?.id === id) {
         setSelectedTable(null);
         setSelectedOrder(null);
       }
       fetchData();
     } catch (err) {
-      alert('Không thể xóa bàn (có thể do đang có hóa đơn)');
+      toastError('Không thể xóa bàn (có thể do đang có hóa đơn)');
     } finally { setLoading(false); }
   };
 
@@ -117,10 +131,10 @@ export default function TablesManagementPage() {
     try {
       setLoading(true);
       await occupyTable(id);
-      notify("Đã mở bàn");
+      toastSuccess("Đã mở bàn");
       await fetchData();
     } catch (err) {
-      alert('Lỗi mở bàn');
+      toastError('Lỗi mở bàn');
     } finally { setLoading(false); }
   };
 
@@ -130,10 +144,10 @@ export default function TablesManagementPage() {
     try {
       setLoading(true);
       await releaseTable(id);
-      notify("Đã kết thúc sử dụng bàn");
+      toastSuccess("Đã kết thúc sử dụng bàn");
       await fetchData();
     } catch (err) {
-      alert('Lỗi kết thúc bàn');
+      toastError('Lỗi kết thúc bàn');
     } finally { setLoading(false); }
   };
 
@@ -148,22 +162,26 @@ export default function TablesManagementPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý bàn</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Theo dõi trạng thái và chi tiết hóa đơn</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Chi nhánh:</p>
+              <select
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                disabled={currentUser?.role !== 'ADMIN'}
+                style={{ background: "white", border: "1px solid var(--border)", padding: "4px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, outline: "none", cursor: currentUser?.role !== 'ADMIN' ? "not-allowed" : "pointer", opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
+              >
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
           </div>
-          <button onClick={() => { setShowAddForm(true); setSelectedTable(null); }} style={{ padding: "12px 24px", background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", transition: "0.2s" }} className="hover-btn">
-            <HiPlus size={18} /> THÊM BÀN
-          </button>
+          {currentUser?.role === 'ADMIN' && (
+            <button onClick={() => { setShowAddForm(true); setSelectedTable(null); }} style={{ padding: "12px 24px", background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", transition: "0.2s" }} className="hover-btn">
+              <HiPlus size={18} /> THÊM BÀN
+            </button>
+          )}
         </div>
 
-        {/* NOTIFICATION */}
-        <div style={{
-          height: successMsg ? 50 : 0, opacity: successMsg ? 1 : 0, overflow: "hidden",
-          transition: "0.3s cubic-bezier(0.4, 0, 0.2, 1)", marginBottom: successMsg ? 24 : 0,
-          background: "var(--success)", color: "white", borderRadius: 16, display: "flex",
-          alignItems: "center", padding: "0 20px", fontWeight: 800, fontSize: 13, gap: 10
-        }}>
-          <HiCheck size={18} /> {successMsg}
-        </div>
+        <div style={{ opacity: 0, height: 0, overflow: "hidden" }} />
 
         {/* STATS */}
         {occupancyStats && (
@@ -261,9 +279,11 @@ export default function TablesManagementPage() {
                       {selectedTable.status === "AVAILABLE" ? "Đang trống" : "Đang được sử dụng"}
                     </p>
                   </div>
-                  <button onClick={() => handleDeleteTable(selectedTable.id)} style={{ padding: 8, background: "var(--bg-primary)", color: "var(--danger)", borderRadius: 10, border: "none", cursor: "pointer", display: "flex", alignItems: "center" }} title="Xóa bàn này">
-                    <HiTrash size={18} />
-                  </button>
+                  {currentUser?.role === 'ADMIN' && (
+                    <button onClick={() => handleDeleteTable(selectedTable.id)} style={{ padding: 8, background: "var(--bg-primary)", color: "var(--danger)", borderRadius: 10, border: "none", cursor: "pointer", display: "flex", alignItems: "center" }} title="Xóa bàn này">
+                      <HiTrash size={18} />
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ height: 1, background: "var(--border)" }} />
@@ -320,9 +340,14 @@ export default function TablesManagementPage() {
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                         <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700, textAlign: "center", padding: 20 }}>Bàn đang bận nhưng không có đơn hàng chưa thanh toán.</p>
-                        <button onClick={() => handleRelease(selectedTable.id)} disabled={loading} style={{ width: "100%", padding: 14, background: "var(--danger)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer" }} className="hover-btn">
-                          GIẢI PHÓNG BÀN (DỌN DẸP XONG)
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => window.location.href = `/?tableId=${selectedTable.id}`} style={{ flex: 1.5, padding: 14, background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer" }} className="hover-btn">
+                            GỌI MÓN MỚI
+                          </button>
+                          <button onClick={() => handleRelease(selectedTable.id)} disabled={loading} style={{ flex: 1, padding: 14, background: "var(--danger)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer" }} className="hover-btn">
+                            GIẢI PHÓNG BÀN
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -7,18 +7,23 @@ export class TableService {
   constructor(private prisma: PrismaService) {}
 
   async createTable(dto: CreateTableDto): Promise<TableResponseDto> {
-    // Check if table name already exists
-    const existing = await this.prisma.table.findUnique({
-      where: { name: dto.name },
+    // Check if table name already exists in this branch
+    const existing = await this.prisma.table.findFirst({
+      where: { 
+        name: dto.name,
+        branch_id: dto.branch_id || null
+      },
     });
 
     if (existing) {
-      throw new BadRequestException(`Table with name "${dto.name}" already exists`);
+      throw new BadRequestException(`Bàn có tên "${dto.name}" đã tồn tại trong chi nhánh này`);
     }
 
     const table = await this.prisma.table.create({
       data: {
         name: dto.name,
+        branch_id: dto.branch_id,
+        area: dto.area || 'Chung',
         status: 'AVAILABLE',
       },
     });
@@ -26,21 +31,39 @@ export class TableService {
     return this.formatTableResponse(table);
   }
 
-  async getAllTables(): Promise<TableResponseDto[]> {
+  async getAllTables(branchId?: string): Promise<TableResponseDto[]> {
+    const where: any = {};
+    if (branchId) where.branch_id = branchId;
+
     const tables = await this.prisma.table.findMany({
+      where,
       include: {
         orders: {
           where: {
-            status: 'PENDING', // Only show current/pending orders
+            status: 'PENDING',
           },
           take: 1,
           orderBy: { created_at: 'desc' },
         },
       },
-      orderBy: { name: 'asc' },
     });
 
-    return tables.map((t) => this.formatTableResponse(t));
+    return tables
+      .map((t) => this.formatTableResponse(t))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  }
+
+  async getAvailableTables(branchId?: string): Promise<TableResponseDto[]> {
+    const where: any = { status: 'AVAILABLE' };
+    if (branchId) where.branch_id = branchId;
+
+    const tables = await this.prisma.table.findMany({
+      where,
+    });
+
+    return tables
+      .map((t) => this.formatTableResponse(t))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }
 
   async getTableById(id: string): Promise<TableResponseDto> {
@@ -49,13 +72,13 @@ export class TableService {
       include: {
         orders: {
           orderBy: { created_at: 'desc' },
-          take: 5, // Last 5 orders
+          take: 5,
         },
       },
     });
 
     if (!table) {
-      throw new NotFoundException(`Table with id ${id} not found`);
+      throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
     }
 
     return this.formatTableResponse(table);
@@ -67,16 +90,18 @@ export class TableService {
     });
 
     if (!table) {
-      throw new NotFoundException(`Table with id ${id} not found`);
+      throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
     }
 
-    // If updating name, check uniqueness
     if (dto.name && dto.name !== table.name) {
-      const existing = await this.prisma.table.findUnique({
-        where: { name: dto.name },
+      const existing = await this.prisma.table.findFirst({
+        where: { 
+            name: dto.name,
+            branch_id: dto.branch_id || table.branch_id
+        },
       });
       if (existing) {
-        throw new BadRequestException(`Table with name "${dto.name}" already exists`);
+        throw new BadRequestException(`Bàn có tên "${dto.name}" đã tồn tại`);
       }
     }
 
@@ -91,43 +116,28 @@ export class TableService {
   async deleteTable(id: string): Promise<void> {
     const table = await this.prisma.table.findUnique({
       where: { id },
-      include: {
-        orders: {
-          take: 1,
-        },
-      },
+      include: { orders: { take: 1 } },
     });
 
-    if (!table) {
-      throw new NotFoundException(`Table with id ${id} not found`);
-    }
+    if (!table) throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
 
     if (table.orders.length > 0) {
-      throw new BadRequestException('Cannot delete table with existing orders');
+      throw new BadRequestException('Không thể xóa bàn đã có lịch sử đơn hàng');
     }
 
-    await this.prisma.table.delete({
-      where: { id },
-    });
+    await this.prisma.table.delete({ where: { id } });
   }
 
   async releaseTable(id: string): Promise<TableResponseDto> {
     const table = await this.prisma.table.findUnique({
       where: { id },
       include: { 
-        orders: { 
-          where: { status: 'PENDING' },
-          take: 1
-        } 
+        orders: { where: { status: 'PENDING' }, take: 1 } 
       }
     });
 
-    if (!table) {
-      throw new NotFoundException(`Table with id ${id} not found`);
-    }
+    if (!table) throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
 
-    // Mark any pending order as COMPLETED (or whichever status indicates finished)
-    // Here we use 'COMPLETED' to match the default status and logic elsewhere
     if (table.orders.length > 0) {
       await this.prisma.order.update({
         where: { id: table.orders[0].id },
@@ -151,13 +161,8 @@ export class TableService {
   }
 
   async occupyTable(id: string): Promise<TableResponseDto> {
-    const table = await this.prisma.table.findUnique({
-      where: { id },
-    });
-
-    if (!table) {
-      throw new NotFoundException(`Table with id ${id} not found`);
-    }
+    const table = await this.prisma.table.findUnique({ where: { id } });
+    if (!table) throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
 
     const updated = await this.prisma.table.update({
       where: { id },
@@ -174,19 +179,12 @@ export class TableService {
     return this.formatTableResponse(updated);
   }
 
-  // Get available tables for dine-in
-  async getAvailableTables(): Promise<TableResponseDto[]> {
-    const tables = await this.prisma.table.findMany({
-      where: { status: 'AVAILABLE' },
-      orderBy: { name: 'asc' },
-    });
+  async getTableOccupancyStatus(branchId?: string): Promise<any> {
+    const where: any = {};
+    if (branchId) where.branch_id = branchId;
 
-    return tables.map((t) => this.formatTableResponse(t));
-  }
-
-  // Get table occupancy status
-  async getTableOccupancyStatus(): Promise<any> {
     const tables = await this.prisma.table.findMany({
+      where,
       include: {
         orders: {
           where: { status: 'PENDING' },
@@ -205,25 +203,24 @@ export class TableService {
       occupied_tables: occupied,
       available_tables: available,
       occupancy_rate: total > 0 ? ((occupied / total) * 100).toFixed(2) + '%' : '0%',
-      tables: tables.map((t) => this.formatTableResponse(t)),
+      tables: tables
+        .map((t) => this.formatTableResponse(t))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
     };
   }
 
   private formatTableResponse(table: any): TableResponseDto {
-    const response: TableResponseDto = {
+    return {
       id: table.id,
       name: table.name,
       status: table.status as 'AVAILABLE' | 'OCCUPIED',
-    };
-
-    if (table.orders && table.orders.length > 0) {
-      response.current_order = {
+      branch_id: table.branch_id,
+      area: table.area,
+      current_order: table.orders?.[0] ? {
         id: table.orders[0].id,
         order_number: table.orders[0].order_number,
         order_type: table.orders[0].order_type,
-      };
-    }
-
-    return response;
+      } : undefined
+    };
   }
 }

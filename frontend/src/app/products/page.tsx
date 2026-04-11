@@ -4,8 +4,12 @@ import { createProduct, updateProduct, getProducts, getCategories, createTopping
 import type { Product, Topping } from "@/types";
 import { HiPlus, HiCollection, HiSparkles, HiCheck, HiPencilAlt, HiBadgeCheck, HiBan } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from "@/components/ToastProvider";
 
 export default function ProductsManagementPage() {
+  const currentUser = useCurrentUser();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [activeTab, setActiveTab] = useState<"product" | "topping">("product");
   const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +17,6 @@ export default function ProductsManagementPage() {
   
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [successMsg, setSuccessMsg] = useState("");
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState({ name_vi: "", name_en: "", price: "", category: "Cà Phê", available: true });
@@ -22,8 +25,10 @@ export default function ProductsManagementPage() {
   const [toppingForm, setToppingForm] = useState({ name: "", price: "", available: true });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
 
   const fetchData = async () => {
     setFetchLoading(true);
@@ -40,10 +45,6 @@ export default function ProductsManagementPage() {
     finally { setFetchLoading(false); }
   };
 
-  const notify = (msg: string) => {
-    setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(""), 3000);
-  };
 
   const handleCreateOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,18 +60,18 @@ export default function ProductsManagementPage() {
       };
 
       if (editingProductId) {
-        await updateProduct(editingProductId, payload);
-        notify("Cập nhật món thành công!");
+        await updateProduct(editingProductId, payload as any);
+        toastSuccess("Cập nhật món thành công!");
       } else {
-        await createProduct(payload);
-        notify("Đã thêm món mới thành công!");
+        await createProduct(payload as any);
+        toastSuccess("Đã thêm món mới thành công!");
       }
       
       setProductForm({ name_vi: "", name_en: "", price: "", category: productForm.category, available: true });
       setEditingProductId(null);
       fetchData();
     } catch (error) {
-      alert("Có lỗi xảy ra khi xử lý món");
+      toastError("Có lỗi xảy ra khi xử lý món");
     } finally { setLoading(false); }
   };
 
@@ -86,22 +87,23 @@ export default function ProductsManagementPage() {
       };
       if (editingToppingId) {
         await updateTopping(editingToppingId, payload);
-        notify("Cập nhật topping thành công!");
+        toastSuccess("Cập nhật topping thành công!");
       } else {
         await createTopping(payload);
-        notify("Đã thêm topping mới thành công!");
+        toastSuccess("Đã thêm topping mới thành công!");
       }
       setToppingForm({ name: "", price: "", available: true });
       setEditingToppingId(null);
       fetchData();
     } catch (error) {
-      alert("Có lỗi xảy ra khi xử lý topping");
+      toastError("Có lỗi xảy ra khi xử lý topping");
     } finally { setLoading(false); }
   };
 
   const startEditProduct = (p: Product) => {
     setEditingProductId(p.id);
-    setProductForm({ name_vi: p.name_vi, name_en: p.name_en, price: p.price.toString(), category: p.category, available: p.available });
+    const basePrice = (p as any).price ?? (p.variants?.length > 0 ? Math.min(...p.variants.map(v => v.price)) : 0);
+    setProductForm({ name_vi: p.name_vi, name_en: p.name_en, price: basePrice.toString(), category: p.category, available: p.available });
     setActiveTab("product");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -135,15 +137,6 @@ export default function ProductsManagementPage() {
           </div>
         </div>
 
-        {/* NOTIFICATION */}
-        <div style={{ 
-            height: successMsg ? 50 : 0, opacity: successMsg ? 1 : 0, overflow: "hidden", 
-            transition: "0.3s cubic-bezier(0.4, 0, 0.2, 1)", marginBottom: successMsg ? 24 : 0,
-            background: "var(--success)", color: "white", borderRadius: 16, display: "flex", 
-            alignItems: "center", padding: "0 20px", fontWeight: 800, fontSize: 13, gap: 10
-        }}>
-          <HiCheck size={18} /> {successMsg}
-        </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 32 }}>
           
@@ -160,7 +153,7 @@ export default function ProductsManagementPage() {
 
             <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
               <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {activeTab === "product" ? (editingProductId ? "SỬA MÓN CHÍNH" : "THÊM MÓN CHÍNH") : (editingToppingId ? "SỬA TOPPING" : "THÊM TOPPING")}
+                {activeTab === "product" ? (editingProductId ? "SỬA MÓN CHÍNH" : (currentUser?.role === 'ADMIN' ? "THÊM MÓN CHÍNH" : "CHỌN MÓN ĐỂ SỬA")) : (editingToppingId ? "SỬA TOPPING" : (currentUser?.role === 'ADMIN' ? "THÊM TOPPING" : "CHỌN TOPPING ĐỂ SỬA"))}
                 {(editingProductId || editingToppingId) && (
                   <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 11, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
                 )}
@@ -171,25 +164,35 @@ export default function ProductsManagementPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
                     <div>
                       <label style={labelStyle}>TÊN MÓN (TIẾNG VIỆT)</label>
-                      <input required placeholder="VD: Cà Phê Sữa Đá" style={inputStyle} value={productForm.name_vi} onChange={e => setProductForm({...productForm, name_vi: e.target.value})} />
+                      <input disabled={currentUser?.role !== 'ADMIN'} required placeholder="VD: Cà Phê Sữa Đá" style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={productForm.name_vi} onChange={e => setProductForm({...productForm, name_vi: e.target.value})} />
                     </div>
                     <div>
                       <label style={labelStyle}>TÊN MÓN (TIẾNG ANH)</label>
-                      <input placeholder="VD: Iced Milk Coffee" style={inputStyle} value={productForm.name_en} onChange={e => setProductForm({...productForm, name_en: e.target.value})} />
+                      <input disabled={currentUser?.role !== 'ADMIN'} placeholder="VD: Iced Milk Coffee" style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={productForm.name_en} onChange={e => setProductForm({...productForm, name_en: e.target.value})} />
                     </div>
                     <div>
                       <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
-                      <input required type="number" placeholder="VD: 35000" style={inputStyle} value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} />
+                      <input disabled={currentUser?.role !== 'ADMIN'} required type="number" placeholder="VD: 35000" style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} />
                     </div>
                     <div>
                       <label style={labelStyle}>DANH MỤC</label>
-                      <select style={inputStyle} value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
-                        {categories.length > 0 ? categories.map(c => <option key={c.category} value={c.category}>{c.category}</option>) : <option value="Cà Phê">Cà Phê</option>}
-                        <option value="Trà Trái Cây">Trà Trái Cây</option>
-                        <option value="Trà Sữa">Trà Sữa</option>
-                        <option value="Đồ Ăn Vặt">Đồ Ăn Vặt</option>
-                        <option value="Món Mới">Món Mới</option>
+                      <select disabled={currentUser?.role !== 'ADMIN'} style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
+                        {categories.map(c => <option key={c.category} value={c.category}>{c.category}</option>)}
+                        {!categories.find(c => c.category === "Cà Phê") && <option value="Cà Phê">Cà Phê</option>}
                       </select>
+                      {currentUser?.role === 'ADMIN' && (
+                        <div style={{ marginTop: 8 }}>
+                          <input 
+                            placeholder="+ Thêm danh mục mới (ghi vào đây nếu chưa có)" 
+                            style={{ ...inputStyle, fontSize: 11, padding: "8px 12px" }}
+                            onBlur={(e) => {
+                              if (e.target.value) {
+                                setProductForm({ ...productForm, category: e.target.value });
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", width: "fit-content", marginBottom: 32 }}>
@@ -197,20 +200,22 @@ export default function ProductsManagementPage() {
                     <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-primary)" }}>Khả dụng (Hiện trên Menu)</span>
                   </label>
 
-                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
-                    {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingProductId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU MÓN MỚI</>}
-                  </button>
+                  {(!editingProductId && currentUser?.role !== 'ADMIN') ? null : (
+                    <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
+                      {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingProductId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU MÓN MỚI</>}
+                    </button>
+                  )}
                 </form>
               ) : (
                 <form onSubmit={handleCreateOrUpdateTopping}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
                     <div>
                       <label style={labelStyle}>TÊN TOPPING</label>
-                      <input required placeholder="VD: Trân Châu Trắng" style={inputStyle} value={toppingForm.name} onChange={e => setToppingForm({...toppingForm, name: e.target.value})} />
+                      <input disabled={currentUser?.role !== 'ADMIN'} required placeholder="VD: Trân Châu Trắng" style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={toppingForm.name} onChange={e => setToppingForm({...toppingForm, name: e.target.value})} />
                     </div>
                     <div>
                       <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
-                      <input required type="number" placeholder="VD: 10000" style={inputStyle} value={toppingForm.price} onChange={e => setToppingForm({...toppingForm, price: e.target.value})} />
+                      <input disabled={currentUser?.role !== 'ADMIN'} required type="number" placeholder="VD: 10000" style={{...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1}} value={toppingForm.price} onChange={e => setToppingForm({...toppingForm, price: e.target.value})} />
                     </div>
                   </div>
                   <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", width: "fit-content", marginBottom: 32 }}>
@@ -218,9 +223,11 @@ export default function ProductsManagementPage() {
                     <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-primary)" }}>Khả dụng (Cho phép Order)</span>
                   </label>
 
-                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
-                    {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingToppingId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU TOPPING MỚI</>}
-                  </button>
+                  {(!editingToppingId && currentUser?.role !== 'ADMIN') ? null : (
+                    <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
+                      {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingToppingId ? <><HiPencilAlt size={18}/> LƯU THAY ĐỔI</> : <><HiPlus size={18}/> LƯU TOPPING MỚI</>}
+                    </button>
+                  )}
                 </form>
               )}
             </div>
@@ -246,12 +253,12 @@ export default function ProductsManagementPage() {
                         <div key={p.id} onClick={() => startEditProduct(p)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: editingProductId === p.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
                           <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 14, fontWeight: 900 }}>{p.name_vi}</span>
+                              <span style={{ fontSize: 14, fontWeight: 900 }}>{(p as any).name_vi}</span>
                               {p.available ? <HiBadgeCheck size={16} color="var(--success)"/> : <HiBan size={16} color="var(--danger)"/>}
                             </div>
                             <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", display: "flex", gap: 8 }}>
-                              <span style={{ background: "white", padding: "2px 8px", borderRadius: 6 }}>{p.category}</span>
-                              <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price)}</span>
+                              <span style={{ background: "white", padding: "2px 8px", borderRadius: 6 }}>{(p as any).category}</span>
+                              <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((p as any).price ?? (p.variants?.length > 0 ? Math.min(...p.variants.map((v: any) => v.price)) : 0))}</span>
                             </div>
                           </div>
                           <div><HiPencilAlt size={20} color={editingProductId === p.id ? "var(--accent)" : "var(--text-muted)"} /></div>

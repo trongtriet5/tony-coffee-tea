@@ -5,25 +5,25 @@
   --bg-primary: #F8F9FA;
   --bg-secondary: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-hover: #F1F3F5;
+  --bg-hover: #F2EDC2; /* Using the pale cream for hover */
   --border: #E9ECEF;
   --border-light: #F1F3F5;
-  --accent: #E1C233;
-  --accent-hover: #D4B62F;
-  --accent-light: rgba(225, 194, 51, 0.1);
-  --success: #2ECC71;
-  --success-light: rgba(46, 204, 113, 0.1);
+  --accent: #346739; /* Dark Green Primary */
+  --accent-hover: #79AE6F; /* Mid Green */
+  --accent-light: rgba(52, 103, 57, 0.1);
+  --success: #346739;
+  --success-light: rgba(52, 103, 57, 0.1);
   --warning: #F39C12;
   --warning-light: rgba(243, 156, 18, 0.1);
   --danger: #E74C3C;
   --danger-light: rgba(231, 76, 60, 0.1);
-  --text-primary: #212529;
-  --text-secondary: #6C757D;
+  --text-primary: #1A2E19; /* Darker green-tinted text */
+  --text-secondary: #5C6B5B;
   --text-muted: #ADB5BD;
-  --gold-gradient: linear-gradient(135deg, #E1C233, #C5AA2B);
+  --gold-gradient: linear-gradient(135deg, #346739, #79AE6F);
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 25px rgba(225, 194, 51, 0.15);
+  --shadow-md: 0 4px 12px rgba(52, 103, 57, 0.08);
+  --shadow-lg: 0 10px 25px rgba(52, 103, 57, 0.15);
 }
 
 * {

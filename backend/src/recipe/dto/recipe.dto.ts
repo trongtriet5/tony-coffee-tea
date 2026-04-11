@@ -2,13 +2,13 @@ import { IsString, IsNumber } from 'class-validator';
 
 export class CreateProductRecipeDto {
   @IsString()
-  product_id: string;
+  variant_id: string;
 
   @IsString()
   material_id: string;
 
   @IsNumber()
-  quantity: number; // Quantity of material needed per product
+  quantity: number; // Quantity of material needed per variant
 }
 
 export class CreateToppingRecipeDto {
@@ -24,6 +24,8 @@ export class CreateToppingRecipeDto {
 
 export class ProductRecipeResponseDto {
   id: string;
+  variant_id: string;
+  variant_size: string;
   product_id: string;
   product_name: string;
   material_id: string;

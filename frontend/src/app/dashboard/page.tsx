@@ -9,6 +9,8 @@ import {
 } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { format, subDays, subMonths } from "date-fns";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from "@/components/ToastProvider";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js';
@@ -29,7 +31,11 @@ const formatK = (n: number) => {
 };
 
 export default function DashboardPage() {
+  const currentUser = useCurrentUser();
+  const { error: toastError } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -43,19 +49,32 @@ export default function DashboardPage() {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener("resize", checkMobile);
+
+    // Fetch branches for admin if user is loaded
+    if (currentUser?.role === 'ADMIN') {
+      import("@/lib/api").then(api => {
+        api.getBranches().then(setBranches);
+      });
+    }
+
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
-    fetchData();
-  }, [startDate, endDate]);
+    if (currentUser) fetchData();
+  }, [startDate, endDate, currentUser, selectedBranchId]);
 
   const fetchData = async () => {
+    if (!currentUser) return;
     setLoading(true);
     try {
-      const d = await getDashboardStats({ startDate, endDate });
+      const bId = currentUser.role === 'ADMIN' ? (selectedBranchId || undefined) : currentUser.branch_id;
+      const d = await getDashboardStats({ startDate, endDate, branch_id: bId });
       setStats(d);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err);
+      toastError("Lỗi khi tải báo cáo thống kê");
+    } finally { setLoading(false); }
   };
 
   const handleRangeSelect = (r: string) => {
@@ -99,9 +118,23 @@ export default function DashboardPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 40 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 900 }}>Financial Overview</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Phân tích tài chính TTVH POS</p>
+          <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Phân tích tài chính Tony Coffee & Tea POS</p>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
+          {currentUser?.role === 'ADMIN' && (
+            <div style={{ position: "relative" }}>
+              <select 
+                value={selectedBranchId} 
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                style={{ padding: "12px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 13, fontWeight: 800, cursor: "pointer", outline: "none", appearance: "none" }}
+              >
+                <option value="">Tất cả chi nhánh</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <HiChevronDown size={14} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-muted)" }} />
+            </div>
+          )}
+
           <div style={{ position: "relative" }}>
             <button
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
@@ -143,10 +176,10 @@ export default function DashboardPage() {
       {/* METRIC CARDS */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 24, marginBottom: 40 }}>
         {[
-          { label: "DOANH THU (PERIOD)", value: formatVND(stats?.today_revenue || 0), icon: HiCurrencyDollar, color: "var(--text-primary)" },
-          { label: "ĐƠN HÀNG (SỐ LƯỢNG)", value: stats?.today_orders || 0, icon: HiShoppingCart, color: "var(--accent)" },
-          { label: "KHUYẾN MÃI (CHẾ KHẤU)", value: formatVND(stats?.today_discount || 0), icon: HiTicket, color: "var(--danger)" },
-          { label: "DOANH THU NET", value: formatVND(stats?.today_net_revenue || 0), icon: HiTrendingUp, color: "var(--success)" },
+          { label: "DOANH THU (PERIOD)", value: formatVND(stats?.total_revenue || 0), icon: HiCurrencyDollar, color: "var(--text-primary)" },
+          { label: "ĐƠN HÀNG (SỐ LƯỢNG)", value: stats?.total_orders || 0, icon: HiShoppingCart, color: "var(--accent)" },
+          { label: "KHUYẾN MÃI (CHẾ KHẤU)", value: formatVND(stats?.total_discount || 0), icon: HiTicket, color: "var(--danger)" },
+          { label: "DOANH THU NET", value: formatVND(stats?.total_net_revenue || 0), icon: HiTrendingUp, color: "var(--success)" },
         ].map((c, i) => (
           <div key={i} style={{ background: "white", border: "1px solid var(--border)", borderRadius: 24, padding: "32px", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
@@ -197,13 +230,15 @@ export default function DashboardPage() {
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
+                  layout: { padding: { left: 40, right: 20, top: 40, bottom: 0 } },
                   plugins: {
                     legend: { display: false },
                     datalabels: {
                       color: '#caa21a',
                       anchor: 'end',
                       align: 'top',
-                      font: { weight: 800, size: 9 },
+                      offset: 8,
+                      font: { weight: 900, size: 11 },
                       formatter: (v: any) => v > 0 ? formatK(v) : '',
                       display: 'auto'
                     },
@@ -212,14 +247,15 @@ export default function DashboardPage() {
                   scales: {
                     y: {
                       beginAtZero: true,
+                      suggestedMax: maxRevenue,
                       border: { display: false },
                       grid: { color: 'rgba(0, 0, 0, 0.04)' },
-                      ticks: { callback: (v: any) => formatK(v as number), font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-muted)' }
+                      ticks: { callback: (v: any) => formatK(v as number), font: { family: 'inherit', size: 12, weight: 800 }, color: 'var(--text-muted)', padding: 10 }
                     },
                     x: {
                       border: { display: false },
                       grid: { display: false },
-                      ticks: { maxTicksLimit: stats.revenue_by_day.length > 30 ? 15 : undefined, font: { family: 'inherit', size: 10, weight: 800 }, color: 'var(--text-muted)' }
+                      ticks: { maxTicksLimit: stats.revenue_by_day.length > 30 ? 15 : undefined, font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-muted)' }
                     }
                   }
                 }}
@@ -235,70 +271,31 @@ export default function DashboardPage() {
           </h3>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Sản phẩm bán chạy nhất giai đoạn này</p>
 
-          <div style={{ height: 260, width: "100%" }}>
-            {stats && (
-              <Bar
-                data={{
-                  labels: stats.top_products.map(p => {
-                    if (p.name.length > 10) {
-                      const w = p.name.split(' ');
-                      const half = Math.ceil(w.length / 2);
-                      return [w.slice(0, half).join(' '), w.slice(half).join(' ')];
-                    }
-                    return p.name;
-                  }),
-                  datasets: [{
-                    label: 'Đã bán',
-                    data: stats.top_products.map(p => p.count),
-                    backgroundColor: (context: any) => {
-                      const ctx = context.chart.ctx;
-                      const area = context.chart.chartArea;
-                      if (!area) return '#caa21a';
-                      const gradient = ctx.createLinearGradient(area.left, 0, area.right, 0);
-                      gradient.addColorStop(0, '#f2d45c');
-                      gradient.addColorStop(1, '#caa21a');
-                      return gradient;
-                    },
-                    borderRadius: 6,
-                    barPercentage: 0.6,
-                    categoryPercentage: 0.8
-                  }]
-                }}
-                options={{
-                  indexAxis: 'y',
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    datalabels: {
-                      color: '#caa21a',
-                      anchor: 'end',
-                      align: 'end',
-                      font: { weight: 900, size: 11 },
-                      formatter: (v: any) => `${v} món`
-                    },
-                    tooltip: {
-                      backgroundColor: 'rgba(0,0,0,0.8)',
-                      padding: 12,
-                      callbacks: {
-                        title: (c: any) => {
-                          const title = c[0].label || '';
-                          return typeof title === 'object' ? title.join(' ') : title;
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    x: { display: false, max: Math.max(...(stats.top_products.map(p => p.count) || [0]), 10) * 1.35 },
-                    y: {
-                      border: { display: false },
-                      grid: { display: false },
-                      ticks: { font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-primary)' }
-                    }
-                  },
-                  layout: { padding: { right: 40, left: 40 } }
-                }}
-              />
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 12 }}>
+            {stats && stats.top_products.map((p, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                <div style={{ width: 160, fontSize: 13, fontWeight: 800, color: "var(--text-primary)", textAlign: "right", lineHeight: 1.2 }}>
+                  {p.name}
+                </div>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 16 }}>
+                  <div 
+                    style={{ 
+                      height: 38, 
+                      width: `${Math.max((p.count / Math.max(...stats.top_products.map(x => x.count), 1)) * 100, 15)}%`, 
+                      background: "var(--gold-gradient)", 
+                      borderRadius: 12,
+                      boxShadow: "0 4px 12px rgba(225, 194, 51, 0.2)",
+                      transition: "width 1s ease-out"
+                    }} 
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 900, color: "var(--accent)", whiteSpace: "nowrap" }}>
+                    {p.count} món
+                  </span>
+                </div>
+              </div>
+            ))}
+            {(!stats || stats.top_products.length === 0) && (
+               <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontWeight: 700 }}>Chưa có dữ liệu bán hàng</div>
             )}
           </div>
         </div>
@@ -328,8 +325,7 @@ export default function DashboardPage() {
                       return gradient;
                     },
                     borderRadius: 6,
-                    borderWidth: 0,
-                    barPercentage: 0.8,
+                    barPercentage: 0.7,
                     categoryPercentage: 0.5
                   },
                   {
@@ -337,8 +333,7 @@ export default function DashboardPage() {
                     data: stats.transaction_count_by_hour.map(h => h.toppings),
                     backgroundColor: '#e5e7eb',
                     borderRadius: 6,
-                    borderWidth: 0,
-                    barPercentage: 0.8,
+                    barPercentage: 0.7,
                     categoryPercentage: 0.5
                   }
                 ]
@@ -346,6 +341,7 @@ export default function DashboardPage() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { left: 40, right: 30, top: 40, bottom: 10 } },
                 plugins: {
                   legend: { 
                     display: true,
@@ -355,7 +351,7 @@ export default function DashboardPage() {
                       font: { family: 'inherit', size: 11, weight: 800 }, 
                       color: 'var(--text-primary)', 
                       usePointStyle: true,
-                      padding: 24 // Padding around the legend items to push them away from data labels
+                      padding: 24
                     }
                   },
                   datalabels: {
@@ -364,7 +360,8 @@ export default function DashboardPage() {
                     align: 'top',
                     font: { weight: 900, size: 10 },
                     formatter: (v: any) => v > 0 ? v : '',
-                    display: 'auto'
+                    display: 'auto',
+                    offset: 4
                   },
                   tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, callbacks: { label: (c: any) => `${c.raw} ${c.datasetIndex === 0 ? 'món' : 'topping'}` } }
                 },
@@ -373,12 +370,12 @@ export default function DashboardPage() {
                     beginAtZero: true,
                     border: { display: false },
                     grid: { color: 'rgba(0, 0, 0, 0.04)' },
-                    ticks: { font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-muted)' }
+                    ticks: { font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-muted)', padding: 12 }
                   },
                   x: {
                     border: { display: false },
                     grid: { display: false },
-                    ticks: { font: { family: 'inherit', size: 10, weight: 800 }, color: 'var(--text-muted)' }
+                    ticks: { font: { family: 'inherit', size: 10, weight: 800 }, color: 'var(--text-muted)', padding: 8 }
                   }
                 }
               }}

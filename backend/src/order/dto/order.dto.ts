@@ -6,6 +6,10 @@ export class CreateOrderItemDto {
   @IsNotEmpty()
   product_id: string;
 
+  @IsString()
+  @IsOptional()
+  variant_id?: string; // Linked to ProductVariant (Size)
+
   @IsNumber()
   quantity: number;
 
@@ -25,10 +29,9 @@ export class CreateOrderDto {
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
 
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  voucher_codes?: string[];
+  @IsString()
+  @IsNotEmpty()
+  branch_id: string;
 
   @IsString()
   @IsNotEmpty()
@@ -37,6 +40,10 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   order_type?: string; // TAKEAWAY, DINE_IN (default: TAKEAWAY)
+
+  @IsString()
+  @IsOptional()
+  source?: string;     // POS, GRAB, SHOPEE, WEB
 
   @IsString()
   @IsOptional()

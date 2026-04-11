@@ -14,6 +14,18 @@ export class ProductController {
     return this.productService.findAll(all === 'true');
   }
 
+  @Get('export')
+  @ApiOperation({ summary: 'Export menu (products & toppings)' })
+  async exportMenu() {
+    return this.productService.exportMenu();
+  }
+
+  @Post('import')
+  @ApiOperation({ summary: 'Import menu' })
+  async importMenu(@Body() data: any) {
+    return this.productService.importMenu(data);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
   async createProduct(@Body() dto: CreateProductDto) {

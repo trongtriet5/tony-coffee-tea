@@ -1,16 +1,30 @@
-export type VoucherStatus = 'UNUSED' | 'USED' | 'EXPIRED';
-export type PaymentMethod = 'CASH' | 'E_WALLET' | 'VOUCHER' | 'MIXED';
 export type OrderType = 'TAKEAWAY' | 'DINE_IN';
 export type MaterialTransactionType = 'IN' | 'OUT' | 'ADJUST' | 'USED';
 export type TableStatus = 'AVAILABLE' | 'OCCUPIED';
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'E_WALLET';
+
+
+export interface Branch {
+  id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  size: string;
+  price: number;
+}
 
 export interface Product {
   id: string;
   name_vi: string;
   name_en: string;
-  price: number;
   category: string;
   available: boolean;
+  variants: ProductVariant[];
 }
 
 export interface Topping {
@@ -24,32 +38,26 @@ export interface Employee {
   id: string;
   name: string;
   position_name: string;
-  role: 'STAFF' | 'MANAGER' | 'HOD';
-  is_official: boolean;
+  role: 'STAFF' | 'ADMIN' | 'MANAGER';
+  branch_id: string;
   created_at: string;
 }
 
 export interface CartItem {
   product: Product;
+  variant_id?: string;
   quantity: number;
   selectedToppings?: Topping[];
   note?: string;
   isExisting?: boolean;
 }
 
-export interface Voucher {
-  id: string;
-  voucher_code: string;
-  employee_id: string;
-  amount: number;
-  status: VoucherStatus;
-  expires_at: string;
-  created_at: string;
-}
-
 export interface OrderItem {
   id: string;
   product_id: string;
+  product?: Product;
+  variant_id?: string;
+  variant?: ProductVariant;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -66,26 +74,20 @@ export interface Order {
   payment_method: string;
   order_type: OrderType;
   table_id?: string;
+  branch_id: string;
+  print_count: number;
   created_at: string;
   items: OrderItem[];
 }
 
 export interface DashboardStats {
-  today_orders: number;
-  today_revenue: number;
-  today_discount: number;
-  today_net_revenue: number;
+  total_orders: number;
+  total_revenue: number;
+  total_discount: number;
+  total_net_revenue: number;
   revenue_by_day: Array<{ date: string; revenue: number }>;
   top_products: Array<{ name: string; count: number }>;
   transaction_count_by_hour: Array<{ hour: string; products: number; toppings: number }>;
-}
-
-export interface VoucherStats {
-  total: number;
-  unused: number;
-  used: number;
-  expired: number;
-  total_discount_given: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -118,7 +120,7 @@ export interface MaterialTransaction {
 
 export interface Recipe {
   id: string;
-  product_id?: string;
+  variant_id?: string;
   topping_id?: string;
   material_id: string;
   quantity: number;
@@ -129,10 +131,11 @@ export interface Table {
   id: string;
   name: string;
   status: TableStatus;
+  branch_id: string;
+  area?: string;
   current_order?: {
     id: string;
     order_number: string;
     order_type: OrderType;
   };
 }
-
