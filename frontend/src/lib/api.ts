@@ -115,7 +115,7 @@ export interface Recipe {
   quantity: number;
 }
 
-export const createProductRecipe = (data: { product_id: string; material_id: string; quantity: number }): Promise<any> => api.post('/recipes/products', data).then((r) => r.data);
+export const createProductRecipe = (data: { variant_id: string; material_id: string; quantity: number }): Promise<any> => api.post('/recipes/products', data).then((r) => r.data);
 export const getProductRecipes = (productId: string): Promise<any[]> => api.get(`/recipes/products/${productId}`).then((r) => r.data);
 export const getRecipesByVariant = (variantId: string): Promise<any[]> => api.get(`/recipes/variants/${variantId}`).then((r) => r.data);
 export const getCompleteProductRecipe = (productId: string): Promise<any> => api.get(`/recipes/products/${productId}/complete`).then((r) => r.data);
