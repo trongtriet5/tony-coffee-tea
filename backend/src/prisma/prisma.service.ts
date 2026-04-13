@@ -1,9 +1,10 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '../../prisma/generated/client';
-
-
-import { Pool } from 'pg';
+// Explicit import forces Vercel's static file tracer to bundle 'pg'
+import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
+
+const { Pool } = pg;
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
