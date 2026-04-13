@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MaterialService } from '../material/material.service';
 import { CreateOrderDto } from './dto/order.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { Product, ProductVariant, Topping } from '@prisma/client';
+import { Product, ProductVariant, Topping } from '../../prisma/generated/client';
 
 @Injectable()
 export class OrderService {
