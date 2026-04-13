@@ -9,18 +9,20 @@ export class RecipeService {
 
   // ============== Product Recipes ==============
   async createProductRecipe(dto: CreateProductRecipeDto) {
-    return this.prisma.productRecipe.create({
-      data: {
+    const existing = await this.prisma.productRecipe.findFirst({
+      where: { variant_id: dto.variant_id, material_id: dto.material_id }
+    });
+
+    return this.prisma.productRecipe.upsert({
+      where: { id: existing?.id || 'none' },
+      update: { quantity: dto.quantity },
+      create: {
         variant_id: dto.variant_id,
         material_id: dto.material_id,
         quantity: dto.quantity,
       },
       include: {
-        variant: {
-          include: {
-            product: true,
-          }
-        },
+        variant: { include: { product: true } },
         material: true,
       },
     });
@@ -83,8 +85,14 @@ export class RecipeService {
 
   // ============== Topping Recipes ==============
   async createToppingRecipe(dto: CreateToppingRecipeDto) {
-    return this.prisma.toppingRecipe.create({
-      data: {
+    const existing = await this.prisma.toppingRecipe.findFirst({
+      where: { topping_id: dto.topping_id, material_id: dto.material_id }
+    });
+
+    return this.prisma.toppingRecipe.upsert({
+      where: { id: existing?.id || 'none' },
+      update: { quantity: dto.quantity },
+      create: {
         topping_id: dto.topping_id,
         material_id: dto.material_id,
         quantity: dto.quantity,
@@ -246,14 +254,24 @@ export class RecipeService {
     // Sheet 3: Guide
     const guideData = [
       ['Tên sheet', 'Cột', 'Mô tả', 'Lưu ý'],
-      ['Món chính', 'Tên món', 'Tên trong hệ thống (phải khớp 100%)', 'Tên tiếng Việt'],
-      ['Món chính', 'Size', 'S, M, L... (phải khớp)', 'Viết hoa'],
-      ['Món chính', 'Tên nguyên liệu', 'Tên trong Vật tư (phải khớp)', ''],
+      ['Món chính', 'Tên món', 'Tên trong hệ thống (phải khớp 100%)', 'Copy từ sheet "Sản phẩm & Size"'],
+      ['Món chính', 'Size', 'S, M, L... (phải khớp)', 'Copy từ sheet "Sản phẩm & Size"'],
+      ['Món chính', 'Tên nguyên liệu', 'Tên trong Vật tư (phải khớp)', 'Copy từ sheet "Vật tư hiện có"'],
       ['Món chính', 'Số lượng', 'Lượng trừ kho khi bán 1 món', 'Số'],
       ['Toppings', 'Tên topping', 'Tên trong hệ thống (phải khớp)', ''],
     ];
     const wsGuide = XLSX.utils.aoa_to_sheet(guideData);
     XLSX.utils.book_append_sheet(wb, wsGuide, 'Hướng dẫn');
+
+    // Sheet 4: Reference Materials
+    const materials = await this.prisma.material.findMany({ select: { name: true, unit: true }, orderBy: { name: 'asc' } });
+    const wsMatData = [['Tên nguyên liệu', 'Đơn vị'], ...materials.map(m => [m.name, m.unit])];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsMatData), 'Vật tư hiện có');
+
+    // Sheet 5: Reference Products
+    const products = await this.prisma.product.findMany({ include: { variants: true }, orderBy: { name_vi: 'asc' } });
+    const wsProdRefData = [['Tên món', 'Size / Phân loại'], ...products.flatMap(p => p.variants.map(v => [p.name_vi, v.size]))];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsProdRefData), 'Sản phẩm & Size');
 
     return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   }
@@ -270,21 +288,32 @@ export class RecipeService {
     if (prodSheet) {
       const data: any[] = XLSX.utils.sheet_to_json(prodSheet);
       for (const row of data) {
-        const prodName = row['Tên món'];
-        const size = row['Size'];
-        const matName = row['Tên nguyên liệu'];
+        const prodNameInput = row['Tên món']?.toString().trim();
+        const sizeInput = row['Size']?.toString().trim();
+        const matNameInput = row['Tên nguyên liệu']?.toString().trim();
         const qty = parseFloat(row['Số lượng sử dụng']);
 
-        if (!prodName || !size || !matName || isNaN(qty)) continue;
+        if (!prodNameInput || !sizeInput || !matNameInput || isNaN(qty)) continue;
 
         try {
           const variant = await this.prisma.productVariant.findFirst({
-            where: { size, product: { name_vi: prodName } }
+            where: { 
+              size: { equals: sizeInput }, 
+              product: { 
+                OR: [
+                  { name_vi: { equals: prodNameInput } },
+                  { name_en: { equals: prodNameInput } }
+                ]
+              } 
+            }
           });
-          const material = await this.prisma.material.findFirst({ where: { name: matName } });
+          
+          const material = await this.prisma.material.findFirst({ 
+            where: { name: { equals: matNameInput } } 
+          });
 
-          if (!variant) throw new Error(`Không tìm thấy món "${prodName}" size ${size}`);
-          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matName}"`);
+          if (!variant) throw new Error(`Không tìm thấy món "${prodNameInput}" size ${sizeInput}`);
+          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matNameInput}"`);
 
           const existingRecipe = await this.prisma.productRecipe.findFirst({ where: { variant_id: variant.id, material_id: material.id } });
 
@@ -295,7 +324,7 @@ export class RecipeService {
           });
           results.products++;
         } catch (err) {
-          results.errors.push(`Món chính - ${prodName}: ${err.message}`);
+          results.errors.push(`Món chính - ${prodNameInput}: ${err.message}`);
         }
       }
     }
@@ -303,18 +332,22 @@ export class RecipeService {
     if (toppingSheet) {
       const data: any[] = XLSX.utils.sheet_to_json(toppingSheet);
       for (const row of data) {
-        const topName = row['Tên topping'];
-        const matName = row['Tên nguyên liệu'];
+        const topNameInput = row['Tên topping']?.toString().trim();
+        const matNameInput = row['Tên nguyên liệu']?.toString().trim();
         const qty = parseFloat(row['Số lượng sử dụng']);
 
-        if (!topName || !matName || isNaN(qty)) continue;
+        if (!topNameInput || !matNameInput || isNaN(qty)) continue;
 
         try {
-          const topping = await this.prisma.topping.findFirst({ where: { name: topName } });
-          const material = await this.prisma.material.findFirst({ where: { name: matName } });
+          const topping = await this.prisma.topping.findFirst({ 
+            where: { name: { equals: topNameInput } } 
+          });
+          const material = await this.prisma.material.findFirst({ 
+            where: { name: { equals: matNameInput } } 
+          });
 
-          if (!topping) throw new Error(`Không tìm thấy topping "${topName}"`);
-          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matName}"`);
+          if (!topping) throw new Error(`Không tìm thấy topping "${topNameInput}"`);
+          if (!material) throw new Error(`Không tìm thấy nguyên liệu "${matNameInput}"`);
 
           const existingRecipe = await this.prisma.toppingRecipe.findFirst({ where: { topping_id: topping.id, material_id: material.id } });
 
@@ -325,7 +358,7 @@ export class RecipeService {
           });
           results.toppings++;
         } catch (err) {
-          results.errors.push(`Toppings - ${topName}: ${err.message}`);
+          results.errors.push(`Toppings - ${topNameInput}: ${err.message}`);
         }
       }
     }

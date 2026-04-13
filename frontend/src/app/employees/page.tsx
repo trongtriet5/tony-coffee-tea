@@ -13,14 +13,22 @@ export default function EmployeesPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  const [form, setForm] = useState({ 
-    username: "", 
-    password: "", 
-    name: "", 
-    role: "STAFF", 
-    branch_id: "" 
+
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    name: "",
+    role: "STAFF",
+    branch_id: ""
   });
 
   useEffect(() => {
@@ -36,7 +44,7 @@ export default function EmployeesPage() {
       setEmployees(empData);
       setBranches(brData);
       if (brData.length > 0 && !form.branch_id) {
-          setForm(prev => ({ ...prev, branch_id: brData[0].id }));
+        setForm(prev => ({ ...prev, branch_id: brData[0].id }));
       }
     } catch (e) { console.error(e); }
     finally { setFetchLoading(false); }
@@ -66,12 +74,12 @@ export default function EmployeesPage() {
 
   const startEdit = (emp: any) => {
     setEditingId(emp.id);
-    setForm({ 
-        username: emp.username, 
-        password: "", 
-        name: emp.name, 
-        role: emp.role, 
-        branch_id: emp.branch_id || "" 
+    setForm({
+      username: emp.username,
+      password: "",
+      name: emp.name,
+      role: emp.role,
+      branch_id: emp.branch_id || ""
     });
   };
 
@@ -91,9 +99,9 @@ export default function EmployeesPage() {
   const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "40px 40px 40px 120px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Account Management</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý tài khoản</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700, marginBottom: 32 }}>Quản lý tài khoản quản lý & nhân viên các chi nhánh</p>
 
         <div style={{ opacity: 0, height: 0, overflow: "hidden" }} />
@@ -105,19 +113,19 @@ export default function EmployeesPage() {
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
                   <label style={labelStyle}>TÊN NHÂN VIÊN</label>
-                  <input required placeholder="VD: Nguyễn Văn A" style={inputStyle} value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                  <input required placeholder="VD: Nguyễn Văn A" style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div>
                   <label style={labelStyle}>TÊN ĐĂNG NHẬP</label>
-                  <input required placeholder="VD: van_a_01" style={inputStyle} value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+                  <input required placeholder="VD: van_a_01" style={inputStyle} value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
                 </div>
                 <div>
                   <label style={labelStyle}>MẬT KHẨU {editingId && "(Để trống nếu không đổi)"}</label>
-                  <input type="password" required={!editingId} placeholder="••••••••" style={inputStyle} value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+                  <input type="password" required={!editingId} placeholder="••••••••" style={inputStyle} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
                 </div>
                 <div>
                   <label style={labelStyle}>VAI TRÒ</label>
-                  <select style={inputStyle} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                  <select style={inputStyle} value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
                     <option value="STAFF">Nhân viên (Staff)</option>
                     <option value="MANAGER">Quản lý (Manager)</option>
                     <option value="ADMIN">Admin hệ thống</option>
@@ -125,7 +133,7 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>CHI NHÁNH</label>
-                  <select style={inputStyle} value={form.branch_id} onChange={e => setForm({...form, branch_id: e.target.value})}>
+                  <select style={inputStyle} value={form.branch_id} onChange={e => setForm({ ...form, branch_id: e.target.value })}>
                     <option value="">Global / Toàn hệ thống</option>
                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
@@ -143,7 +151,7 @@ export default function EmployeesPage() {
                 <h3 style={{ fontSize: 18, fontWeight: 900 }}>Danh Sách Nhân Viên</h3>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>{employees.length} Accounts</div>
               </div>
-              
+
               {fetchLoading ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><AiOutlineLoading3Quarters size={32} className="spin" color="var(--accent)" /></div>
               ) : (
@@ -152,7 +160,7 @@ export default function EmployeesPage() {
                     <div key={emp.id} style={{ padding: "16px 20px", background: "var(--bg-primary)", borderRadius: 16, border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                         <div style={{ width: 44, height: 44, borderRadius: 14, background: "white", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>
-                          {emp.role === 'ADMIN' ? <HiShieldCheck size={24}/> : <HiOutlineUser size={24}/>}
+                          {emp.role === 'ADMIN' ? <HiShieldCheck size={24} /> : <HiOutlineUser size={24} />}
                         </div>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text-primary)" }}>{emp.name} <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginLeft: 6 }}>@{emp.username}</span></div>
@@ -164,8 +172,8 @@ export default function EmployeesPage() {
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => startEdit(emp)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><HiPencilAlt size={18}/></button>
-                        <button onClick={() => handleDelete(emp.id)} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}><HiTrash size={18}/></button>
+                        <button onClick={() => startEdit(emp)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><HiPencilAlt size={18} /></button>
+                        <button onClick={() => handleDelete(emp.id)} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}><HiTrash size={18} /></button>
                       </div>
                     </div>
                   ))}

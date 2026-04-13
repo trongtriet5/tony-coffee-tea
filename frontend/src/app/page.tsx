@@ -210,6 +210,7 @@ export default function POSPage() {
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
   const [paymentPending, setPaymentPending] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -217,6 +218,7 @@ export default function POSPage() {
   const [orderType, setOrderType] = useState<OrderType>("TAKEAWAY");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [discount, setDiscount] = useState<number>(0);
   const [showTableActionModal, setShowTableActionModal] = useState<Table | null>(null);
 
   useEffect(() => {
@@ -224,6 +226,13 @@ export default function POSPage() {
       if (currentUser.branch_id) setSelectedBranchId(currentUser.branch_id);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -398,7 +407,7 @@ export default function POSPage() {
     if (i.isExisting) return s;
     return s + calculateItemPrice(i) * i.quantity;
   }, 0);
-  const finalAmount = totalAmount;
+  const finalAmount = Math.max(0, totalAmount - discount);
 
   const checkout = async () => {
     if (cart.length === 0) return;
@@ -423,7 +432,8 @@ export default function POSPage() {
           items,
           payment_method: paymentMethod,
           order_type: orderType,
-          table_id: selectedTableId || undefined
+          table_id: selectedTableId || undefined,
+          discount_amount: discount
         };
         order = await createOrder(payload);
       }
@@ -431,9 +441,10 @@ export default function POSPage() {
       if (paymentMethod === "BANK_TRANSFER") {
         setPaymentPending(order);
       } else {
+        toastSuccess("Thanh toán thành công!");
         setOrderSuccess(order);
       }
-      setCart([]); setIsCartOpen(false); setSelectedTableId(null); setActiveOrderId(null);
+      setCart([]); setDiscount(0); setIsCartOpen(false); setSelectedTableId(null); setActiveOrderId(null);
     } catch (err) { toastError("Lỗi hệ thống khi thanh toán"); } finally { setIsCheckingOut(false); }
   };
 
@@ -447,21 +458,13 @@ export default function POSPage() {
     printWindow.document.write('<html><head><title>In hóa đơn</title>');
     printWindow.document.write('<style>');
     printWindow.document.write(`
-      @page { size: auto; margin: 0; }
-      body { 
-        margin: 0; 
-        padding: 0;
-        display: flex; 
-        justify-content: center;
-        background: white;
-      }
+      @page { size: 80mm auto; margin: 0; }
+      body { margin: 0; padding: 0; }
       #receipt-print {
         width: 80mm !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
         padding: 5mm !important;
         box-sizing: border-box !important;
-        display: flex !important;
-        flex-direction: column !important;
       }
       table { width: 100%; border-collapse: collapse; }
       * { font-family: 'Courier New', Courier, monospace !important; box-sizing: border-box; }
@@ -498,15 +501,13 @@ export default function POSPage() {
         if (printWindow) {
           printWindow.focus();
           printWindow.print();
-          printWindow.close();
+          // printWindow.close();
         }
-      }, 1000);
+      }, 1500);
     } else {
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      }, 300);
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
     }
   };
 
@@ -575,7 +576,7 @@ export default function POSPage() {
 
           <div style={{ position: "relative", width: isMobile ? "120px" : "320px" }}>
             <HiSearch size={18} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-            <input type="text" placeholder="Tìm..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: "100%", background: "white", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px 12px 42px", fontSize: 13, fontWeight: 600, outline: "none" }} />
+            <input type="text" placeholder="Tìm..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: "100%", background: "white", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px 12px 42px", fontSize: 13, fontWeight: 600, outline: "none" }} />
           </div>
         </div>
 
@@ -653,8 +654,24 @@ export default function POSPage() {
 
           {/* Billing Area */}
           <div style={{ padding: "32px 28px", background: "var(--bg-primary)", borderTop: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-              <span style={{ fontWeight: 900, fontSize: 18 }}>TỔNG CHỐT</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontWeight: 800, fontSize: 13, color: "var(--text-secondary)" }}>TỔNG CỘNG</span>
+              <span style={{ fontWeight: 800, fontSize: 15 }}>{formatVND(totalAmount)}</span>
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <span style={{ fontWeight: 800, fontSize: 13, color: "var(--text-secondary)" }}>GIẢM GIÁ</span>
+              <input 
+                type="number" 
+                value={discount || ""} 
+                onChange={(e) => setDiscount(Number(e.target.value))}
+                placeholder="0"
+                style={{ width: 120, textAlign: "right", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, fontWeight: 800, outline: "none" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, paddingTop: 16, borderTop: "1px dashed var(--border)" }}>
+              <span style={{ fontWeight: 900, fontSize: 18 }}>THANH TOÁN</span>
               <span style={{ fontWeight: 900, fontSize: 26, color: "var(--accent)" }}>{formatVND(finalAmount)}</span>
             </div>
 

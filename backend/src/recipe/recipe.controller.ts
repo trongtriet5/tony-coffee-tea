@@ -33,6 +33,11 @@ export class RecipeController {
     return this.recipeService.findProductRecipesByProduct(productId);
   }
 
+  @Get('variants/:variantId')
+  async getRecipesByVariant(@Param('variantId') variantId: string) {
+    return this.recipeService.findProductRecipes(variantId);
+  }
+
   @Get('products/:productId/complete')
   async getCompleteProductRecipe(@Param('productId') productId: string) {
     // Note: If productId is passed, we might need a way to find first variant or sum all variants.

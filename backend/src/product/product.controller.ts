@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, CreateToppingDto } from './dto/product.dto';
@@ -60,5 +60,17 @@ export class ProductController {
   @ApiOperation({ summary: 'Update a topping' })
   async updateTopping(@Param('id') id: string, @Body() dto: CreateToppingDto) {
     return this.productService.updateTopping(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a product' })
+  async deleteProduct(@Param('id') id: string) {
+    return this.productService.deleteProduct(id);
+  }
+
+  @Delete('toppings/:id')
+  @ApiOperation({ summary: 'Delete a topping' })
+  async deleteTopping(@Param('id') id: string) {
+    return this.productService.deleteTopping(id);
   }
 }

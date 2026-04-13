@@ -179,6 +179,63 @@ export class TableService {
     return this.formatTableResponse(updated);
   }
 
+  async transferTable(fromTableId: string, toTableId: string): Promise<TableResponseDto> {
+    if (fromTableId === toTableId) {
+      throw new BadRequestException('Không thể chuyển đơn sang cùng một bàn');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const fromTable = await tx.table.findUnique({
+        where: { id: fromTableId },
+        include: { orders: { where: { status: 'PENDING' }, take: 1 } },
+      });
+
+      if (!fromTable) throw new NotFoundException(`Không tìm thấy bàn nguồn với ID ${fromTableId}`);
+      if (fromTable.status !== 'OCCUPIED') {
+        throw new BadRequestException('Bàn nguồn đang trống, không thể chuyển');
+      }
+
+      const toTable = await tx.table.findUnique({
+        where: { id: toTableId },
+      });
+
+      if (!toTable) throw new NotFoundException(`Không tìm thấy bàn đích với ID ${toTableId}`);
+      if (toTable.status !== 'AVAILABLE') {
+        throw new BadRequestException('Bàn đích không trống (đang sử dụng)');
+      }
+
+      if (fromTable.orders && fromTable.orders.length > 0) {
+        const activeOrder = fromTable.orders[0];
+        // Đổi order sang bàn mới
+        await tx.order.update({
+          where: { id: activeOrder.id },
+          data: { table_id: toTableId },
+        });
+      }
+
+      // Bàn nguồn thành trống
+      await tx.table.update({
+        where: { id: fromTableId },
+        data: { status: 'AVAILABLE' },
+      });
+
+      // Bàn đích thành occupied
+      const updatedToTable = await tx.table.update({
+        where: { id: toTableId },
+        data: { status: 'OCCUPIED' },
+        include: {
+          orders: {
+            where: { status: 'PENDING' },
+            take: 1,
+            orderBy: { created_at: 'desc' },
+          },
+        },
+      });
+
+      return this.formatTableResponse(updatedToTable);
+    });
+  }
+
   async getTableOccupancyStatus(branchId?: string): Promise<any> {
     const where: any = {};
     if (branchId) where.branch_id = branchId;

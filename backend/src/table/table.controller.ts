@@ -13,7 +13,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { TableService } from './table.service';
-import { CreateTableDto, UpdateTableDto } from './dto/table.dto';
+import { CreateTableDto, UpdateTableDto, TransferTableDto } from './dto/table.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
@@ -77,5 +77,11 @@ export class TableController {
   @HttpCode(HttpStatus.OK)
   async releaseTable(@Param('id') id: string) {
     return this.tableService.releaseTable(id);
+  }
+
+  @Post(':id/transfer')
+  @HttpCode(HttpStatus.OK)
+  async transferTable(@Param('id') id: string, @Body() dto: TransferTableDto) {
+    return this.tableService.transferTable(id, dto.to_table_id);
   }
 }

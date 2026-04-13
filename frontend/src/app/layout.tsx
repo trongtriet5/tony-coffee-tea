@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi">
       <body style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
         <ToastProvider>
           <Sidebar />
           <MobileNav />

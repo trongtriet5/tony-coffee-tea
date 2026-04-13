@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type {
-  Product, Topping, Order, DashboardStats, 
+  Product, Topping, Order, DashboardStats,
   PaginatedResponse, PaymentMethod, OrderType, TableStatus, Table
 } from '@/types';
 
@@ -29,17 +29,19 @@ api.interceptors.response.use((response) => response, (error) => {
   return Promise.reject(error);
 });
 
-export const login = (username: string, password: string): Promise<any> => 
+export const login = (username: string, password: string): Promise<any> =>
   api.post('/auth/login', { username, password }).then((r) => r.data);
 
 // ============== Products & Toppings ==============
 export const getProducts = (params?: { all?: boolean }): Promise<Product[]> => api.get('/products', { params }).then((r) => r.data);
 export const createProduct = (data: Omit<Product, 'id'>): Promise<Product> => api.post('/products', data).then((r) => r.data);
 export const updateProduct = (id: string, data: Partial<Product>): Promise<Product> => api.put(`/products/${id}`, data).then((r) => r.data);
+export const deleteProduct = (id: string): Promise<void> => api.delete(`/products/${id}`).then((r) => r.data);
 export const getCategories = (): Promise<{ category: string; count: number }[]> => api.get('/products/categories').then((r) => r.data);
 export const getToppings = (params?: { all?: boolean }): Promise<Topping[]> => api.get('/products/toppings', { params }).then((r) => r.data);
 export const createTopping = (data: Omit<Topping, 'id'>): Promise<Topping> => api.post('/products/toppings', data).then((r) => r.data);
 export const updateTopping = (id: string, data: Partial<Topping>): Promise<Topping> => api.put(`/products/toppings/${id}`, data).then((r) => r.data);
+export const deleteTopping = (id: string): Promise<void> => api.delete(`/products/toppings/${id}`).then((r) => r.data);
 
 
 // ============== Orders ==============
@@ -88,19 +90,20 @@ export interface MaterialTransaction {
   created_at: Date;
 }
 
-export const getMaterials = (): Promise<Material[]> => api.get('/materials').then((r) => r.data);
+export const getMaterials = (branchId?: string): Promise<Material[]> => api.get('/materials', { params: { branch_id: branchId } }).then((r) => r.data);
 export const createMaterial = (data: { name: string; unit: string; cost_per_unit: number; initial_stock?: number }): Promise<Material> => api.post('/materials', data).then((r) => r.data);
 export const updateMaterial = (id: string, data: Partial<Material>): Promise<Material> => api.put(`/materials/${id}`, data).then((r) => r.data);
 export const deleteMaterial = (id: string): Promise<void> => api.delete(`/materials/${id}`).then((r) => r.data);
 export const addMaterialTransaction = (data: { material_id: string; type: 'IN' | 'OUT' | 'ADJUST' | 'USED'; quantity: number; note?: string }): Promise<any> => api.post('/materials/transactions/add', data).then((r) => r.data);
 export const getMaterialTransactions = (id: string, limit?: number): Promise<MaterialTransaction[]> => api.get(`/materials/${id}/transactions`, { params: { limit } }).then((r) => r.data);
+export const getAllTransactions = (branchId?: string, limit: number = 100): Promise<MaterialTransaction[]> => api.get('/materials/transactions/all', { params: { branch_id: branchId, limit } }).then((r) => r.data);
 export const getInventoryReport = (params?: { startDate?: string; endDate?: string }): Promise<any> => api.get('/materials/reports/inventory', { params }).then((r) => r.data);
 export const exportMaterialsExcel = (branchId?: string): string => `${BASE_URL}/materials/export/excel${branchId ? `?branch_id=${branchId}` : ''}`;
 export const getMaterialTemplateUrl = (): string => `${BASE_URL}/materials/export/template`;
-export const importMaterials = (file: File): Promise<any> => {
+export const importMaterials = (file: File, branchId?: string): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post('/materials/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+  return api.post(`/materials/import${branchId ? `?branch_id=${branchId}` : ''}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
 };
 
 // ============== Recipes (BOM) ==============
@@ -114,6 +117,7 @@ export interface Recipe {
 
 export const createProductRecipe = (data: { product_id: string; material_id: string; quantity: number }): Promise<any> => api.post('/recipes/products', data).then((r) => r.data);
 export const getProductRecipes = (productId: string): Promise<any[]> => api.get(`/recipes/products/${productId}`).then((r) => r.data);
+export const getRecipesByVariant = (variantId: string): Promise<any[]> => api.get(`/recipes/variants/${variantId}`).then((r) => r.data);
 export const getCompleteProductRecipe = (productId: string): Promise<any> => api.get(`/recipes/products/${productId}/complete`).then((r) => r.data);
 export const updateProductRecipe = (id: string, quantity: number): Promise<any> => api.put(`/recipes/products/${id}`, { quantity }).then((r) => r.data);
 export const deleteProductRecipe = (id: string): Promise<void> => api.delete(`/recipes/products/${id}`).then((r) => r.data);
@@ -139,6 +143,7 @@ export const updateTable = (id: string, data: Partial<Table>): Promise<Table> =>
 export const deleteTable = (id: string): Promise<void> => api.delete(`/tables/${id}`).then((r) => r.data);
 export const occupyTable = (id: string): Promise<Table> => api.post(`/tables/${id}/occupy`, {}).then((r) => r.data);
 export const releaseTable = (id: string): Promise<Table> => api.post(`/tables/${id}/release`, {}).then((r) => r.data);
+export const transferTable = (id: string, toTableId: string): Promise<Table> => api.post(`/tables/${id}/transfer`, { to_table_id: toTableId }).then((r) => r.data);
 export const getTableOccupancy = (branchId?: string): Promise<any> => api.get('/tables/occupancy-status', { params: { branch_id: branchId } }).then((r) => r.data);
 
 export default api;

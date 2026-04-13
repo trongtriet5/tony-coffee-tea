@@ -23,12 +23,12 @@ import { CreateMaterialDto, UpdateMaterialDto, MaterialTransactionDto } from './
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('materials')
 export class MaterialController {
   constructor(private materialService: MaterialService) {}
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createMaterial(@Body() dto: CreateMaterialDto, @Request() req) {
@@ -39,22 +39,30 @@ export class MaterialController {
     return this.materialService.createMaterial(payload);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get()
   async getAllMaterials(@Request() req, @Query('branch_id') branch_id?: string) {
     const bId = req.user.role === 'ADMIN' ? branch_id : req.user.branch_id;
     return this.materialService.getAllMaterials(bId);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getMaterialById(@Param('id') id: string) {
     return this.materialService.getMaterialById(id);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   async updateMaterial(@Param('id') id: string, @Body() dto: UpdateMaterialDto) {
     return this.materialService.updateMaterial(id, dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteMaterial(@Param('id') id: string) {
@@ -62,12 +70,16 @@ export class MaterialController {
   }
 
   // Material Transactions
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Post('transactions/add')
   @HttpCode(HttpStatus.CREATED)
   async addTransaction(@Body() dto: MaterialTransactionDto) {
     return this.materialService.addMaterialTransaction(dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get(':id/transactions')
   async getMaterialTransactions(
     @Param('id') id: string,
@@ -76,7 +88,21 @@ export class MaterialController {
     return this.materialService.getMaterialTransactions(id, parseInt(limit));
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('transactions/all')
+  async getAllTransactions(
+    @Request() req,
+    @Query('branch_id') branch_id?: string,
+    @Query('limit') limit: string = '100',
+  ) {
+    const bId = req.user.role === 'ADMIN' ? branch_id : req.user.branch_id;
+    return this.materialService.getAllTransactions(bId, parseInt(limit));
+  }
+
   // Reports
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('reports/inventory')
   async getInventoryReport(
     @Query('startDate') startDate?: string,
@@ -87,6 +113,8 @@ export class MaterialController {
     return this.materialService.getMaterialInventoryReport(start, end);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('export/excel')
   async exportExcel(@Res() res: Response, @Request() req, @Query('branch_id') branchId?: string) {
     const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
@@ -99,8 +127,9 @@ export class MaterialController {
   }
 
   @Get('export/template')
-  async exportTemplate(@Res() res: Response) {
-    const buffer = await this.materialService.generateTemplate();
+  async exportTemplate(@Res() res: Response, @Request() req) {
+    const bId = req.user?.branch_id;
+    const buffer = await this.materialService.generateTemplate(bId);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="material_template.xlsx"',
@@ -108,10 +137,17 @@ export class MaterialController {
     res.send(buffer);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
-  async importMaterials(@UploadedFile() file: any, @Request() req) {
+  async importMaterials(
+    @UploadedFile() file: any, 
+    @Request() req,
+    @Query('branch_id') branch_id?: string
+  ) {
     if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can import');
-    return this.materialService.importMaterials(file.buffer, req.user.branch_id);
+    const bId = branch_id || req.user.branch_id;
+    return this.materialService.importMaterials(file.buffer, bId);
   }
 }

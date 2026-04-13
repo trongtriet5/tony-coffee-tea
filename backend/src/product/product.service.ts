@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MaterialService } from '../material/material.service';
 
@@ -19,13 +19,16 @@ export class ProductService {
     // Append cost calculation to each variant
     const enrichedProducts = await Promise.all(
       products.map(async (p) => {
+        let productHasRecipe = false;
         const enrichedVariants = await Promise.all(
           p.variants.map(async (v) => {
+            const recipes = await this.prisma.productRecipe.findMany({ where: { variant_id: v.id } });
+            if (recipes.length > 0) productHasRecipe = true;
             const cost = await this.materialService.getRecipeCost(v.id);
-            return { ...v, cost };
+            return { ...v, cost, has_recipe: recipes.length > 0 };
           }),
         );
-        return { ...p, variants: enrichedVariants };
+        return { ...p, variants: enrichedVariants, has_recipe: productHasRecipe };
       }),
     );
 
@@ -40,8 +43,9 @@ export class ProductService {
 
     return Promise.all(
       toppings.map(async (t) => {
+        const recipes = await this.prisma.toppingRecipe.findMany({ where: { topping_id: t.id } });
         const cost = await this.materialService.getRecipeCost(undefined, t.id);
-        return { ...t, cost };
+        return { ...t, cost, has_recipe: recipes.length > 0 };
       }),
     );
   }
@@ -118,5 +122,32 @@ export class ProductService {
       await this.createTopping(t);
     }
     return { success: true };
+  }
+
+  async deleteProduct(id: string) {
+    // Check if product is in any order history
+    const orderItemCount = await this.prisma.orderItem.count({ where: { product_id: id } });
+    if (orderItemCount > 0) {
+      throw new BadRequestException('Sản phẩm đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn món.');
+    }
+
+    // Delete variants first (and their recipes)
+    const variants = await this.prisma.productVariant.findMany({ where: { product_id: id } });
+    for (const v of variants) {
+      await this.prisma.productRecipe.deleteMany({ where: { variant_id: v.id } });
+    }
+    await this.prisma.productVariant.deleteMany({ where: { product_id: id } });
+    return this.prisma.product.delete({ where: { id } });
+  }
+
+  async deleteTopping(id: string) {
+    // Check if topping is in any order history
+    const orderItemToppingCount = await this.prisma.orderItemTopping.count({ where: { topping_id: id } });
+    if (orderItemToppingCount > 0) {
+      throw new BadRequestException('Topping đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn.');
+    }
+
+    await this.prisma.toppingRecipe.deleteMany({ where: { topping_id: id } });
+    return this.prisma.topping.delete({ where: { id } });
   }
 }

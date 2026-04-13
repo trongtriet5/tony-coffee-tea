@@ -71,14 +71,23 @@ export class OrderService {
       };
     });
 
-    const finalAmountVal = totalAmountVal;
+    const discountAmountVal = dto.discount_amount || 0;
+    const finalAmountVal = Math.max(0, totalAmountVal - discountAmountVal);
+
+    const todayStr = new Intl.DateTimeFormat('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: 'Asia/Ho_Chi_Minh'
+    }).format(new Date());
+    const ddmm = todayStr.substring(0, 2) + todayStr.substring(3, 5);
 
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
-          order_number: `TONY-${Date.now().toString().slice(-4)}-${uuidv4().split('-')[0].toUpperCase()}`,
+          order_number: `TONY-${ddmm}-${uuidv4().split('-')[0].toUpperCase()}`,
           total_amount: totalAmountVal,
-          discount_amount: 0,
+          discount_amount: discountAmountVal,
           final_amount: finalAmountVal,
           payment_method: dto.payment_method,
           status: orderType === 'DINE_IN' ? 'PENDING' : 'COMPLETED',
@@ -92,7 +101,11 @@ export class OrderService {
       });
 
       // Track Material usage via BOM
-      await this.materialService.deductStockForOrder(order.id, dto.items, tx);
+      const enrichedItems = dto.items.map(item => ({
+        ...item,
+        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
+      }));
+      await this.materialService.deductStockForOrder(order.id, order.order_number, enrichedItems, tx);
 
       if (tableId) {
         await tx.table.update({ where: { id: tableId }, data: { status: 'OCCUPIED' } });
@@ -200,7 +213,11 @@ export class OrderService {
         });
 
         // Deduct materials
-        await this.materialService.deductStockForOrder(id, items, tx);
+        const enrichedItems = items.map(item => ({
+          ...item,
+          product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
+        }));
+        await this.materialService.deductStockForOrder(id, updatedOrder.order_number, enrichedItems, tx);
         
         return updatedOrder;
       });
@@ -326,6 +343,26 @@ export class OrderService {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const sum = periodStats._sum;
+
+    // --- Comparison Logic ---
+    const diffMs = rangeEnd.getTime() - rangeStart.getTime();
+    const prevRangeStart = new Date(rangeStart.getTime() - diffMs);
+    const prevRangeEnd = new Date(rangeStart.getTime() - 1);
+
+    const prevWhere: any = { created_at: { gte: prevRangeStart, lte: prevRangeEnd } };
+    if (branch_id) prevWhere.branch_id = branch_id;
+
+    const prevStats = await this.prisma.order.aggregate({
+      _sum: { final_amount: true },
+      _count: { id: true },
+      where: prevWhere
+    });
+
+    const calculateChange = (current: number, previous: number) => {
+      if (!previous || previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+
     return {
       total_orders: periodStats._count.id,
       total_revenue: sum.total_amount || 0,
@@ -333,7 +370,13 @@ export class OrderService {
       total_net_revenue: sum.final_amount || 0,
       revenue_by_day,
       top_products,
-      transaction_count_by_hour
+      transaction_count_by_hour,
+      comparison: {
+        prev_total_orders: prevStats._count.id,
+        prev_total_net_revenue: prevStats._sum.final_amount || 0,
+        orders_change_percent: calculateChange(periodStats._count.id, prevStats._count.id),
+        revenue_change_percent: calculateChange(sum.final_amount || 0, prevStats._sum.final_amount || 0)
+      }
     };
   }
 

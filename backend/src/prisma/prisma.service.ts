@@ -1,19 +1,17 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-
-const connectionStringStr = process.env.DATABASE_URL || 'mysql://root:trongtriet5@localhost:3306/ipos';
-const connectionString = connectionStringStr.replace(/^mysql:\/\//, 'mariadb://');
-
-const adapter = new PrismaMariaDb(connectionString);
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const adapter = new PrismaPg(pool);
     super({
       adapter,
       log: ['error', 'warn'],
-    } as any);
+    });
   }
 
   async onModuleInit() {

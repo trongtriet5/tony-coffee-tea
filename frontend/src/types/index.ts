@@ -88,6 +88,12 @@ export interface DashboardStats {
   revenue_by_day: Array<{ date: string; revenue: number }>;
   top_products: Array<{ name: string; count: number }>;
   transaction_count_by_hour: Array<{ hour: string; products: number; toppings: number }>;
+  comparison?: {
+    prev_total_orders: number;
+    prev_total_net_revenue: number;
+    orders_change_percent: number;
+    revenue_change_percent: number;
+  };
 }
 
 export interface PaginatedResponse<T> {

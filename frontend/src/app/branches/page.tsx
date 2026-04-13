@@ -12,6 +12,14 @@ export default function BranchesPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [branchForm, setBranchForm] = useState({ name: "", address: "", phone: "" });
 
@@ -70,9 +78,9 @@ export default function BranchesPage() {
   const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "40px 40px 40px 120px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Branch Management</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý chi nhánh</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700, marginBottom: 32 }}>Quản lý danh sách chi nhánh trong hệ thống</p>
 
         <div style={{ opacity: 0, height: 0, overflow: "hidden" }} />
@@ -115,8 +123,8 @@ export default function BranchesPage() {
                         <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{b.address || "Chưa có địa chỉ"}</div>
                       </div>
                       <div style={{ display: "flex", gap: 12 }}>
-                        <button onClick={() => startEdit(b)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer" }}><HiPencilAlt size={20}/></button>
-                        <button onClick={() => handleDelete(b.id)} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}><HiTrash size={20}/></button>
+                        <button onClick={() => startEdit(b)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer" }}><HiPencilAlt size={20} /></button>
+                        <button onClick={() => handleDelete(b.id)} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}><HiTrash size={20} /></button>
                       </div>
                     </div>
                   ))}

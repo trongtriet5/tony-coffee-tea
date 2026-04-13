@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getTables, createTable, updateTable, deleteTable, getTableOccupancy, occupyTable, releaseTable, getOrder, getBranches } from "@/lib/api";
+import { getTables, createTable, updateTable, deleteTable, getTableOccupancy, occupyTable, releaseTable, transferTable, getOrder, getBranches } from "@/lib/api";
 import type { Table, Order, Branch } from "@/types";
 import { HiPlus, HiCheck, HiOutlineDesktopComputer, HiBan, HiTrash, HiOutlineShoppingCart } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -18,6 +18,17 @@ export default function TablesManagementPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferTarget, setTransferTarget] = useState("");
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const [orderLoading, setOrderLoading] = useState(false);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -71,6 +82,8 @@ export default function TablesManagementPage() {
   const handleSelectTable = async (table: Table) => {
     setSelectedTable(table);
     setShowAddForm(false);
+    setIsTransferring(false);
+    setTransferTarget("");
 
     if (table.current_order?.id) {
       setOrderLoading(true);
@@ -112,19 +125,34 @@ export default function TablesManagementPage() {
   };
 
   const handleDeleteTable = async (id: string) => {
-    if (!confirm('Bạn chắc chắn muốn xóa bàn này?')) return;
-    setLoading(true);
-    try {
-      await deleteTable(id);
-      toastSuccess("Đã xóa bàn");
-      if (selectedTable?.id === id) {
-        setSelectedTable(null);
-        setSelectedOrder(null);
-      }
-      fetchData();
-    } catch (err) {
-      toastError('Không thể xóa bàn (có thể do đang có hóa đơn)');
-    } finally { setLoading(false); }
+    const Swal = (window as any).Swal;
+    if (!Swal) return;
+
+    const result = await Swal.fire({
+      title: 'Xác nhận xóa?',
+      text: "Bạn chắc chắn muốn xóa bàn này?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'var(--accent)',
+      cancelButtonColor: 'var(--text-muted)',
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await deleteTable(id);
+        toastSuccess("Đã xóa bàn");
+        if (selectedTable?.id === id) {
+          setSelectedTable(null);
+          setSelectedOrder(null);
+        }
+        fetchData();
+      } catch (err) {
+        toastError('Không thể xóa bàn (có thể do đang có hóa đơn)');
+      } finally { setLoading(false); }
+    }
   };
 
   const handleOccupy = async (id: string) => {
@@ -151,11 +179,38 @@ export default function TablesManagementPage() {
     } finally { setLoading(false); }
   };
 
+  const handleTransfer = async () => {
+    if (!selectedTable || !transferTarget) return;
+    try {
+      setLoading(true);
+      await transferTable(selectedTable.id, transferTarget);
+      toastSuccess("Chuyển bàn thành công");
+      setIsTransferring(false);
+      setTransferTarget("");
+      const [tablesData, occupancy] = await Promise.all([
+        getTables(selectedBranchId),
+        getTableOccupancy(selectedBranchId),
+      ]);
+      setTables(tablesData);
+      setOccupancyStats(occupancy);
+      
+      const newTable = tablesData.find(t => t.id === transferTarget);
+      if (newTable) {
+        handleSelectTable(newTable);
+      } else {
+        setSelectedTable(null);
+        setSelectedOrder(null);
+      }
+    } catch (err) {
+      toastError('Lỗi chuyển bàn');
+    } finally { setLoading(false); }
+  };
+
   const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
   const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "40px 40px 40px 120px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
         {/* HEADER */}
@@ -292,6 +347,33 @@ export default function TablesManagementPage() {
                   <div>
                     {orderLoading ? (
                       <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><AiOutlineLoading3Quarters className="spin" size={24} color="var(--accent)" /></div>
+                    ) : isTransferring ? (
+                      <div style={{ padding: "20px 0" }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>Chọn bàn trống để chuyển đến:</p>
+                        <select 
+                          value={transferTarget} 
+                          onChange={(e) => setTransferTarget(e.target.value)}
+                          style={{ 
+                            width: "100%", padding: "14px 16px", borderRadius: 12, border: "1px solid var(--border)", 
+                            fontSize: 13, fontWeight: 700, outline: "none", marginBottom: 20,
+                            appearance: "none", backgroundColor: "var(--bg-primary)",
+                            background: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M7 10l5 5 5-5z\"/></svg>') no-repeat right 16px center"
+                          }}
+                        >
+                          <option value="">-- Chọn bàn --</option>
+                          {tables.filter(t => t.status === "AVAILABLE" && t.id !== selectedTable?.id).map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => setIsTransferring(false)} disabled={loading} style={{ flex: 1, padding: 12, background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "0.2s" }} className="hover-btn">
+                            HỦY
+                          </button>
+                          <button onClick={handleTransfer} disabled={loading || !transferTarget} style={{ flex: 1, padding: 12, background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "0.2s", opacity: !transferTarget ? 0.5 : 1 }} className="hover-btn">
+                            XÁC NHẬN CHUYỂN
+                          </button>
+                        </div>
+                      </div>
                     ) : selectedOrder ? (
                       <div>
                         <div style={{ marginBottom: 16 }}>
@@ -336,6 +418,11 @@ export default function TablesManagementPage() {
                             HỦY / RỜI ĐI
                           </button>
                         </div>
+                        <div style={{ marginTop: 8 }}>
+                          <button onClick={() => setIsTransferring(true)} disabled={loading} style={{ width: "100%", padding: 12, background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "0.2s" }} className="hover-btn">
+                            CHUYỂN BÀN
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -346,6 +433,11 @@ export default function TablesManagementPage() {
                           </button>
                           <button onClick={() => handleRelease(selectedTable.id)} disabled={loading} style={{ flex: 1, padding: 14, background: "var(--danger)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer" }} className="hover-btn">
                             GIẢI PHÓNG BÀN
+                          </button>
+                        </div>
+                        <div style={{ marginTop: 0 }}>
+                          <button onClick={() => setIsTransferring(true)} disabled={loading} style={{ width: "100%", padding: 12, background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "0.2s" }} className="hover-btn">
+                            CHUYỂN BÀN
                           </button>
                         </div>
                       </div>
