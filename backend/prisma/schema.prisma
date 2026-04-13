@@ -4,7 +4,9 @@ generator client {
   binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
-datasource db {  provider = "postgresql"}
+datasource db {
+  provider = "postgresql"
+}
 
 model Branch {
   id         String     @id @default(uuid())
