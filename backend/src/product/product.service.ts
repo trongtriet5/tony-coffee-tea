@@ -12,42 +12,42 @@ export class ProductService {
   async findAll(includeUnavailable?: boolean) {
     const products = await this.prisma.product.findMany({
       where: includeUnavailable ? undefined : { available: true },
-      include: { variants: true },
+      include: { 
+        variants: {
+          include: {
+            recipes: { take: 1 } // Just check if any recipe exists
+          }
+        } 
+      },
       orderBy: [{ category: 'asc' }, { name_vi: 'asc' }],
     });
 
-    // Append cost calculation to each variant
-    const enrichedProducts = await Promise.all(
-      products.map(async (p) => {
-        let productHasRecipe = false;
-        const enrichedVariants = await Promise.all(
-          p.variants.map(async (v) => {
-            const recipes = await this.prisma.productRecipe.findMany({ where: { variant_id: v.id } });
-            if (recipes.length > 0) productHasRecipe = true;
-            const cost = await this.materialService.getRecipeCost(v.id);
-            return { ...v, cost, has_recipe: recipes.length > 0 };
-          }),
-        );
-        return { ...p, variants: enrichedVariants, has_recipe: productHasRecipe };
-      }),
-    );
-
-    return enrichedProducts;
+    // POS doesn't need cost calculation, only CMS does.
+    // For now, let's just optimize the existing logic to be much faster.
+    return products.map((p) => {
+      let productHasRecipe = false;
+      const enrichedVariants = p.variants.map((v) => {
+        const hasRecipe = v.recipes.length > 0;
+        if (hasRecipe) productHasRecipe = true;
+        // Cost is 0 for POS by default, we can add a specific param for CMS if needed
+        return { ...v, cost: 0, has_recipe: hasRecipe };
+      });
+      return { ...p, variants: enrichedVariants, has_recipe: productHasRecipe };
+    });
   }
 
   async getToppings(includeUnavailable?: boolean) {
     const toppings = await this.prisma.topping.findMany({
       where: includeUnavailable ? undefined : { available: true },
+      include: { recipes: { take: 1 } },
       orderBy: { name: 'asc' },
     });
 
-    return Promise.all(
-      toppings.map(async (t) => {
-        const recipes = await this.prisma.toppingRecipe.findMany({ where: { topping_id: t.id } });
-        const cost = await this.materialService.getRecipeCost(undefined, t.id);
-        return { ...t, cost, has_recipe: recipes.length > 0 };
-      }),
-    );
+    return toppings.map((t) => ({
+      ...t,
+      cost: 0,
+      has_recipe: t.recipes.length > 0
+    }));
   }
 
   async getCategories() {

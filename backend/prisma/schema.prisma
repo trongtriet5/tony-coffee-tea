@@ -152,11 +152,10 @@ model Material {
   @@map("materials")
 }
 
-// Chỉ lưu 100 transaction gần nhất per material (cleanup logic in service)
 model MaterialTransaction {
   id          String   @id @default(uuid())
   material_id String
-  type        String   // IN | OUT | USED | ADJUST
+  type        String
   quantity    Float
   note        String?
   created_at  DateTime @default(now())
