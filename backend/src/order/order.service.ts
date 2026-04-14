@@ -3,14 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MaterialService } from '../material/material.service';
 import { CreateOrderDto } from './dto/order.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { Product, ProductVariant, Topping } from '@prisma/client';
 
 @Injectable()
 export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly materialService: MaterialService,
-  ) {}
+  ) { }
 
   async create(dto: CreateOrderDto) {
     const orderType = dto.order_type || 'TAKEAWAY';
@@ -45,19 +44,19 @@ export class OrderService {
 
       let unitPrice = 0;
       if (item.variant_id) {
-          const variant = variantMap.get(item.variant_id);
-          if (!variant) throw new BadRequestException(`Size không hợp lệ cho sản phẩm ${prod.name_vi}`);
-          unitPrice = variant.price;
+        const variant = variantMap.get(item.variant_id);
+        if (!variant) throw new BadRequestException(`Size không hợp lệ cho sản phẩm ${prod.name_vi}`);
+        unitPrice = variant.price;
       } else {
-          throw new BadRequestException(`Vui lòng chọn size cho sản phẩm ${prod.name_vi}`);
+        throw new BadRequestException(`Vui lòng chọn size cho sản phẩm ${prod.name_vi}`);
       }
 
       let itemSubtotal = unitPrice * item.quantity;
       const selectedToppings = (item.topping_ids || []).map((tid) => {
-         const t = toppingMap.get(tid);
-         if (!t) throw new BadRequestException(`Topping ${tid} không tồn tại`);
-         itemSubtotal += t.price * item.quantity;
-         return { topping_id: t.id, name: t.name, price: t.price };
+        const t = toppingMap.get(tid);
+        if (!t) throw new BadRequestException(`Topping ${tid} không tồn tại`);
+        itemSubtotal += t.price * item.quantity;
+        return { topping_id: t.id, name: t.name, price: t.price };
       });
 
       totalAmountVal += itemSubtotal;
@@ -75,10 +74,10 @@ export class OrderService {
     const finalAmountVal = Math.max(0, totalAmountVal - discountAmountVal);
 
     const todayStr = new Intl.DateTimeFormat('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh'
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'Asia/Ho_Chi_Minh'
     }).format(new Date());
     const ddmm = todayStr.substring(0, 2) + todayStr.substring(3, 5);
 
@@ -128,9 +127,9 @@ export class OrderService {
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({
         where, skip, take: Number(limit), orderBy: { created_at: 'desc' },
-        include: { 
+        include: {
           branch: true,
-          items: { include: { product: true, variant: true, toppings: true } } 
+          items: { include: { product: true, variant: true, toppings: true } }
         }
       }),
       this.prisma.order.count({ where })
@@ -141,9 +140,9 @@ export class OrderService {
   async findOne(id: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { 
+      include: {
         branch: true,
-        items: { include: { product: true, variant: true, toppings: true } } 
+        items: { include: { product: true, variant: true, toppings: true } }
       }
     });
     if (!order) throw new NotFoundException(`Order ${id} không tồn tại`);
@@ -151,100 +150,100 @@ export class OrderService {
   }
 
   async addItemsToOrder(id: string, items: any[], paymentMethod?: string) {
-      const order = await this.findOne(id);
-      
-      const productIds = items.map((i) => i.product_id);
-      const variantIds = items.filter(i => i.variant_id).map(i => i.variant_id as string);
-      const allToppingIds = items.flatMap((i) => i.topping_ids || []);
-  
-      const [products, variants, toppings] = await Promise.all([
-        this.prisma.product.findMany({ where: { id: { in: productIds } } }),
-        this.prisma.productVariant.findMany({ where: { id: { in: variantIds } } }),
-        this.prisma.topping.findMany({ where: { id: { in: allToppingIds } } }),
-      ]);
-  
-      const productMap = new Map(products.map((p) => [p.id, p]));
-      const variantMap = new Map(variants.map((v) => [v.id, v]));
-      const toppingMap = new Map(toppings.map((t) => [t.id, t]));
-  
-      let extraTotal = 0;
-      const itemsData = items.map((item) => {
-        const prod = productMap.get(item.product_id);
-        if (!prod) throw new BadRequestException(`Sản phẩm ${item.product_id} không tồn tại`);
-  
-        const variant = variantMap.get(item.variant_id);
-        const unitPrice = variant ? variant.price : (prod as any).price || 0;
-  
-        let itemSubtotal = unitPrice * item.quantity;
-        const selectedToppings = (item.topping_ids || []).map((tid) => {
-           const t = toppingMap.get(tid);
-           if (!t) throw new BadRequestException(`Topping ${tid} không tồn tại`);
-           itemSubtotal += t.price * item.quantity;
-           return { topping_id: t.id, name: t.name, price: t.price };
-        });
-  
-        extraTotal += itemSubtotal;
-        return {
-          order_id: id,
-          product_id: prod.id,
-          variant_id: item.variant_id,
-          quantity: item.quantity,
-          unit_price: unitPrice,
-          subtotal: itemSubtotal,
-          toppings: { create: selectedToppings }
-        };
-      });
-  
-      return this.prisma.$transaction(async (tx) => {
-        // Create new items
-        for (const itemData of itemsData) {
-            await tx.orderItem.create({ data: itemData });
-        }
-  
-        // Update order total
-        const updatedOrder = await tx.order.update({
-          where: { id },
-          data: {
-            total_amount: { increment: extraTotal },
-            final_amount: { increment: extraTotal },
-            ...(paymentMethod ? { payment_method: paymentMethod } : {})
-          },
-          include: { items: { include: { product: true, variant: true, toppings: true } } }
-        });
+    const order = await this.findOne(id);
 
-        // Deduct materials
-        const enrichedItems = items.map(item => ({
-          ...item,
-          product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
-        }));
-        await this.materialService.deductStockForOrder(id, updatedOrder.order_number, enrichedItems, tx);
-        
-        return updatedOrder;
+    const productIds = items.map((i) => i.product_id);
+    const variantIds = items.filter(i => i.variant_id).map(i => i.variant_id as string);
+    const allToppingIds = items.flatMap((i) => i.topping_ids || []);
+
+    const [products, variants, toppings] = await Promise.all([
+      this.prisma.product.findMany({ where: { id: { in: productIds } } }),
+      this.prisma.productVariant.findMany({ where: { id: { in: variantIds } } }),
+      this.prisma.topping.findMany({ where: { id: { in: allToppingIds } } }),
+    ]);
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const variantMap = new Map(variants.map((v) => [v.id, v]));
+    const toppingMap = new Map(toppings.map((t) => [t.id, t]));
+
+    let extraTotal = 0;
+    const itemsData = items.map((item) => {
+      const prod = productMap.get(item.product_id);
+      if (!prod) throw new BadRequestException(`Sản phẩm ${item.product_id} không tồn tại`);
+
+      const variant = variantMap.get(item.variant_id);
+      const unitPrice = variant ? variant.price : (prod as any).price || 0;
+
+      let itemSubtotal = unitPrice * item.quantity;
+      const selectedToppings = (item.topping_ids || []).map((tid) => {
+        const t = toppingMap.get(tid);
+        if (!t) throw new BadRequestException(`Topping ${tid} không tồn tại`);
+        itemSubtotal += t.price * item.quantity;
+        return { topping_id: t.id, name: t.name, price: t.price };
       });
+
+      extraTotal += itemSubtotal;
+      return {
+        order_id: id,
+        product_id: prod.id,
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+        unit_price: unitPrice,
+        subtotal: itemSubtotal,
+        toppings: { create: selectedToppings }
+      };
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      // Create new items
+      for (const itemData of itemsData) {
+        await tx.orderItem.create({ data: itemData });
+      }
+
+      // Update order total
+      const updatedOrder = await tx.order.update({
+        where: { id },
+        data: {
+          total_amount: { increment: extraTotal },
+          final_amount: { increment: extraTotal },
+          ...(paymentMethod ? { payment_method: paymentMethod } : {})
+        },
+        include: { items: { include: { product: true, variant: true, toppings: true } } }
+      });
+
+      // Deduct materials
+      const enrichedItems = items.map(item => ({
+        ...item,
+        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
+      }));
+      await this.materialService.deductStockForOrder(id, updatedOrder.order_number, enrichedItems, tx);
+
+      return updatedOrder;
+    });
   }
 
   async getDashboardStats(branch_id?: string, startDateStr?: string, endDateStr?: string) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-    
+
     let rangeStart = new Date();
     rangeStart.setDate(rangeStart.getDate() - 7);
     rangeStart.setHours(0, 0, 0, 0);
-    
+
     let rangeEnd = new Date(tomorrow);
 
     if (startDateStr) {
-        rangeStart = new Date(startDateStr);
-        rangeStart.setHours(0, 0, 0, 0);
+      rangeStart = new Date(startDateStr);
+      rangeStart.setHours(0, 0, 0, 0);
     }
     if (endDateStr) {
-        rangeEnd = new Date(endDateStr);
-        rangeEnd.setHours(23, 59, 59, 999);
+      rangeEnd = new Date(endDateStr);
+      rangeEnd.setHours(23, 59, 59, 999);
     }
 
     const where: any = { created_at: { gte: rangeStart, lte: rangeEnd } };
     if (branch_id) where.branch_id = branch_id;
-    
+
     const [periodStats, allStatsInPeriod, topProductsRaw, ordersInPeriod] = await Promise.all([
       this.prisma.order.aggregate({
         _sum: { total_amount: true, discount_amount: true, final_amount: true },
@@ -273,7 +272,7 @@ export class OrderService {
       where: { id: { in: productIds } },
       select: { id: true, name_vi: true }
     });
-    
+
     const top_products = topProductsRaw.map((tp: any) => ({
       name: products.find((pr: any) => pr.id === tp.product_id)?.name_vi || 'Ẩn danh',
       count: tp._sum.quantity
@@ -281,60 +280,60 @@ export class OrderService {
 
     const hourlyMap: Record<string, { products: number; toppings: number }> = {};
     for (let h = 0; h <= 23; h++) {
-        hourlyMap[h.toString().padStart(2, '0') + ':00'] = { products: 0, toppings: 0 };
+      hourlyMap[h.toString().padStart(2, '0') + ':00'] = { products: 0, toppings: 0 };
     }
 
     ordersInPeriod.forEach((o: any) => {
-        const d = new Date(o.created_at);
-        const hourStr = new Intl.DateTimeFormat('en-GB', {
-            hour: '2-digit',
-            hour12: false,
-            timeZone: 'Asia/Ho_Chi_Minh'
-        }).format(d);
-        
-        const hour = parseInt(hourStr, 10);
-        const key = hour.toString().padStart(2, '0') + ':00';
-        if (hourlyMap[key] !== undefined) {
-            let pCount = 0;
-            let tCount = 0;
-            o.items.forEach((i: any) => {
-                pCount += i.quantity;
-                if (i.toppings && Array.isArray(i.toppings)) {
-                    tCount += (i.toppings.length * i.quantity);
-                }
-            });
-            hourlyMap[key].products += pCount;
-            hourlyMap[key].toppings += tCount;
-        }
+      const d = new Date(o.created_at);
+      const hourStr = new Intl.DateTimeFormat('en-GB', {
+        hour: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Ho_Chi_Minh'
+      }).format(d);
+
+      const hour = parseInt(hourStr, 10);
+      const key = hour.toString().padStart(2, '0') + ':00';
+      if (hourlyMap[key] !== undefined) {
+        let pCount = 0;
+        let tCount = 0;
+        o.items.forEach((i: any) => {
+          pCount += i.quantity;
+          if (i.toppings && Array.isArray(i.toppings)) {
+            tCount += (i.toppings.length * i.quantity);
+          }
+        });
+        hourlyMap[key].products += pCount;
+        hourlyMap[key].toppings += tCount;
+      }
     });
 
     const transaction_count_by_hour = Object.entries(hourlyMap)
-        .map(([hour, counts]) => ({ hour, products: counts.products, toppings: counts.toppings }))
-        .sort((a, b) => a.hour.localeCompare(b.hour));
+      .map(([hour, counts]) => ({ hour, products: counts.products, toppings: counts.toppings }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
 
     const revenueMap: Record<string, number> = {};
     const daysDiff = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     for (let i = 0; i <= daysDiff; i++) {
-        const d = new Date(rangeStart);
-        d.setDate(rangeStart.getDate() + i);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const key = `${y}-${m}-${day}`;
-        revenueMap[key] = 0;
+      const d = new Date(rangeStart);
+      d.setDate(rangeStart.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${day}`;
+      revenueMap[key] = 0;
     }
-    
+
     allStatsInPeriod.forEach((o: any) => {
       const d = new Date(o.created_at);
       // Group by Asia/Ho_Chi_Minh date
       const dateKey = new Intl.DateTimeFormat('en-GB', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          timeZone: 'Asia/Ho_Chi_Minh'
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: 'Asia/Ho_Chi_Minh'
       }).format(d).split('/').reverse().join('-'); // DD/MM/YYYY -> YYYY-MM-DD
-      
+
       if (revenueMap[dateKey] !== undefined) revenueMap[dateKey] += o.final_amount;
     });
 
@@ -387,9 +386,9 @@ export class OrderService {
     return this.prisma.order.update({
       where: { id },
       data: { print_count: { increment: 1 } },
-      include: { 
+      include: {
         branch: true,
-        items: { include: { product: true, variant: true, toppings: true } } 
+        items: { include: { product: true, variant: true, toppings: true } }
       }
     });
   }
