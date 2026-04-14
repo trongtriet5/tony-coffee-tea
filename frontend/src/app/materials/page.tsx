@@ -5,7 +5,8 @@ import { Material, MaterialTransaction } from "@/types";
 import {
   getMaterials, createMaterial, addMaterialTransaction,
   getMaterialTransactions, getInventoryReport, updateMaterial,
-  deleteMaterial, importMaterials, getMaterialTemplateUrl, exportMaterialsExcel
+  deleteMaterial, importMaterials, getMaterialTemplateUrl, exportMaterialsExcel,
+  getBranches, getAllTransactions
 } from "@/lib/api";
 import { HiPlus, HiBeaker, HiExclamationCircle, HiCheck, HiPencilAlt, HiBadgeCheck, HiBan, HiTrash, HiDownload, HiCollection, HiUpload, HiDocumentText } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -48,34 +49,42 @@ export default function MaterialsPage() {
   }, [currentUser]);
 
   const fetchData = async (branchId?: string) => {
+    // Avoid redundant fetches if no branch is selected yet for non-admin
+    const targetBranch = branchId || selectedBranchId;
+    if (currentUser?.role !== 'ADMIN' && !targetBranch) return;
+
     setFetchLoading(true);
     try {
-      const targetBranch = branchId || selectedBranchId;
       const [mats, brs, txs] = await Promise.all([
         getMaterials(targetBranch),
-        import('@/lib/api').then(m => m.getBranches()),
-        import('@/lib/api').then(m => m.getAllTransactions(targetBranch))
+        getBranches(),
+        getAllTransactions(targetBranch)
       ]);
       setMaterials(mats);
       setBranches(brs);
       setTransactions(txs);
 
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      if (user && user.role !== 'ADMIN' && user.branch_id) {
-        setSelectedBranchId(user.branch_id);
-      } else if (brs.length > 0 && !selectedBranchId) {
+      // Initialize selectedBranchId if not set
+      if (currentUser?.role === 'ADMIN' && brs.length > 0 && !targetBranch) {
         setSelectedBranchId(brs[0].id);
       }
-    } catch (e) { console.error(e); }
-    finally { setFetchLoading(false); }
+    } catch (e) {
+      console.error("Fetch error:", e);
+    } finally {
+      setFetchLoading(false);
+    }
   };
 
+  // Single effect to handle data synchronization
   useEffect(() => {
-    if (currentUser && selectedBranchId) {
-      fetchData(selectedBranchId);
+    if (currentUser) {
+      if (currentUser.branch_id && !selectedBranchId) {
+        setSelectedBranchId(currentUser.branch_id);
+      } else {
+        fetchData(selectedBranchId);
+      }
     }
-  }, [selectedBranchId]);
+  }, [currentUser, selectedBranchId]);
 
 
   const handleCreateOrUpdateMaterial = async (e: React.FormEvent) => {
@@ -209,9 +218,9 @@ export default function MaterialsPage() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {currentUser?.role?.toUpperCase() === 'ADMIN' && (
               <div style={{ position: "relative" }}>
-                <select 
-                  style={{ ...inputStyle, width: "auto", minWidth: 200, padding: "10px 16px", background: "white" }} 
-                  value={selectedBranchId} 
+                <select
+                  style={{ ...inputStyle, width: "auto", minWidth: 200, padding: "10px 16px", background: "white" }}
+                  value={selectedBranchId}
                   onChange={e => setSelectedBranchId(e.target.value)}
                 >
                   <option value="">Tất cả chi nhánh</option>
@@ -305,12 +314,32 @@ export default function MaterialsPage() {
               </div>
 
               {fetchLoading ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}><AiOutlineLoading3Quarters size={32} className="spin" color="var(--accent)" /></div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 16 }}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="skeleton" style={{ height: 80, borderRadius: 16, width: "100%" }} />
+                  ))}
+                </div>
               ) : (
-                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }} className="custom-scroll">
+                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }} className="custom-scroll animate-fade-in">
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {materials.map(m => (
-                      <div key={m.id} onClick={() => loadTransactions(m.id)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: selectedMaterialId === m.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
+                    {materials.map((m, idx) => (
+                      <div
+                        key={m.id}
+                        onClick={() => loadTransactions(m.id)}
+                        style={{
+                          padding: "16px 20px",
+                          borderRadius: 16,
+                          background: "var(--bg-primary)",
+                          border: selectedMaterialId === m.id ? "2px solid var(--accent)" : "2px solid transparent",
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          transition: "0.2s",
+                          animationDelay: `${idx * 0.05}s`
+                        }}
+                        className="list-item animate-fade-in"
+                      >
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <span style={{ fontSize: 14, fontWeight: 900 }}>{m.name}</span>
@@ -362,19 +391,29 @@ export default function MaterialsPage() {
                 </tr>
               </thead>
               <tbody>
-                {materials.map(m => (
-                  <tr key={m.id} style={{ borderBottom: "1px solid var(--bg-primary)" }}>
-                    <td style={{ padding: "16px", fontWeight: 700 }}>{m.name}</td>
-                    <td style={{ padding: "16px", color: "var(--text-secondary)" }}>{m.unit}</td>
-                    {currentUser?.role?.toUpperCase() === 'ADMIN' && (
-                      <td style={{ padding: "16px" }}>₫{m.cost_per_unit.toLocaleString("vi-VN")}</td>
-                    )}
-                    <td style={{ padding: "16px", fontWeight: 900, color: m.stock_current <= 0 ? "var(--danger)" : "var(--success)" }}>{Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")}</td>
-                    {currentUser?.role?.toUpperCase() === 'ADMIN' && (
-                      <td style={{ padding: "16px", textAlign: "right", fontWeight: 900, color: "var(--accent)" }}>₫{m.stock_value.toLocaleString("vi-VN")}</td>
-                    )}
-                  </tr>
-                ))}
+                {fetchLoading ? (
+                  [1, 2, 3, 4, 5].map(i => (
+                    <tr key={i}>
+                      <td colSpan={5} style={{ padding: "12px 16px" }}>
+                        <div className="skeleton" style={{ height: 24, borderRadius: 4, width: "100%" }} />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  materials.map(m => (
+                    <tr key={m.id} style={{ borderBottom: "1px solid var(--bg-primary)" }} className="animate-fade-in">
+                      <td style={{ padding: "16px", fontWeight: 700 }}>{m.name}</td>
+                      <td style={{ padding: "16px", color: "var(--text-secondary)" }}>{m.unit}</td>
+                      {currentUser?.role?.toUpperCase() === 'ADMIN' && (
+                        <td style={{ padding: "16px" }}>₫{m.cost_per_unit.toLocaleString("vi-VN")}</td>
+                      )}
+                      <td style={{ padding: "16px", fontWeight: 900, color: m.stock_current <= 0 ? "var(--danger)" : "var(--success)" }}>{Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")}</td>
+                      {currentUser?.role?.toUpperCase() === 'ADMIN' && (
+                        <td style={{ padding: "16px", textAlign: "right", fontWeight: 900, color: "var(--accent)" }}>₫{m.stock_value.toLocaleString("vi-VN")}</td>
+                      )}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -437,34 +476,44 @@ export default function MaterialsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map(tx => (
-                      <tr key={tx.id} style={{ borderBottom: "1px solid var(--bg-primary)", background: selectedMaterialId === tx.material_id ? "#f0f7ff" : "transparent" }}>
-                        <td style={{ padding: "16px", whiteSpace: "nowrap" }}>
-                          <div style={{ fontWeight: 700 }}>{format(new Date(tx.created_at), "dd/MM/yyyy")}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(tx.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</div>
-                        </td>
-                        <td style={{ padding: "16px" }}>
-                          <div style={{ fontWeight: 900, color: "var(--text-primary)" }}>{(tx as any).material?.name}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{(tx as any).material?.unit}</div>
-                        </td>
-                        <td style={{ padding: "16px" }}>
-                          <span style={{ display: "inline-block", fontSize: 10, fontWeight: 900, padding: "4px 8px", borderRadius: 6, background: tx.type === 'IN' ? "#10b98120" : tx.type === 'OUT' ? "#ef444420" : tx.type === 'ADJUST' ? "#f5a62d20" : "#3b82f620", color: tx.type === 'IN' ? "#10b981" : tx.type === 'OUT' ? "#ef4444" : tx.type === 'ADJUST' ? "#f5a62d" : "#3b82f6" }}>
-                            {tx.type}
-                          </span>
-                        </td>
-                        <td style={{ padding: "16px", textAlign: "right", fontWeight: 900, fontSize: 14 }}>
-                          <span style={{ color: tx.type === 'IN' || (tx.type === 'ADJUST' && tx.quantity > 0) ? "var(--success)" : "var(--danger)" }}>
-                            {tx.type === 'IN' || (tx.type === 'ADJUST' && tx.quantity > 0) ? '+' : '-'}{Number(Math.abs(tx.quantity)).toFixed(3).replace(/\.?0+$/, "")}
-                          </span>
-                        </td>
-                        <td style={{ padding: "16px", fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>
-                          {tx.note || "Hao hụt tự động"}
-                        </td>
-                      </tr>
-                    ))}
+                    {fetchLoading ? (
+                      [1, 2, 3, 4, 5].map(i => (
+                        <tr key={i}>
+                          <td colSpan={5} style={{ padding: "12px 16px" }}>
+                            <div className="skeleton" style={{ height: 40, borderRadius: 8, width: "100%" }} />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      transactions.map(tx => (
+                        <tr key={tx.id} style={{ borderBottom: "1px solid var(--bg-primary)", background: selectedMaterialId === tx.material_id ? "#f0f7ff" : "transparent" }} className="animate-fade-in">
+                          <td style={{ padding: "16px", whiteSpace: "nowrap" }}>
+                            <div style={{ fontWeight: 700 }}>{format(new Date(tx.created_at), "dd/MM/yyyy")}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(tx.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+                          <td style={{ padding: "16px" }}>
+                            <div style={{ fontWeight: 900, color: "var(--text-primary)" }}>{(tx as any).material?.name}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{(tx as any).material?.unit}</div>
+                          </td>
+                          <td style={{ padding: "16px" }}>
+                            <span style={{ display: "inline-block", fontSize: 10, fontWeight: 900, padding: "4px 8px", borderRadius: 6, background: tx.type === 'IN' ? "#10b98120" : tx.type === 'OUT' ? "#ef444420" : tx.type === 'ADJUST' ? "#f5a62d20" : "#3b82f620", color: tx.type === 'IN' ? "#10b981" : tx.type === 'OUT' ? "#ef4444" : tx.type === 'ADJUST' ? "#f5a62d" : "#3b82f6" }}>
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td style={{ padding: "16px", textAlign: "right", fontWeight: 900, fontSize: 14 }}>
+                            <span style={{ color: tx.type === 'IN' || (tx.type === 'ADJUST' && tx.quantity > 0) ? "var(--success)" : "var(--danger)" }}>
+                              {tx.type === 'IN' || (tx.type === 'ADJUST' && tx.quantity > 0) ? '+' : '-'}{Number(Math.abs(tx.quantity)).toFixed(3).replace(/\.?0+$/, "")}
+                            </span>
+                          </td>
+                          <td style={{ padding: "16px", fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>
+                            {tx.note || "Hao hụt tự động"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
-                {transactions.length === 0 && (
+                {!fetchLoading && transactions.length === 0 && (
                   <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>Chưa có lịch sử giao dịch nào được ghi nhận.</div>
                 )}
               </div>

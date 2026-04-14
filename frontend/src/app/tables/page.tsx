@@ -239,26 +239,33 @@ export default function TablesManagementPage() {
         <div style={{ opacity: 0, height: 0, overflow: "hidden" }} />
 
         {/* STATS */}
-        {occupancyStats && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
-            <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <p style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8 }}>TỔNG BÀN</p>
-              <p style={{ fontSize: 24, fontWeight: 900, color: "var(--text-primary)" }}>{occupancyStats.total_tables}</p>
-            </div>
-            <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <p style={{ fontSize: 12, fontWeight: 900, color: "var(--danger)", marginBottom: 8 }}>BÀN ĐANG SỬ DỤNG</p>
-              <p style={{ fontSize: 24, fontWeight: 900, color: "var(--danger)" }}>{occupancyStats.occupied_tables}</p>
-            </div>
-            <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <p style={{ fontSize: 12, fontWeight: 900, color: "var(--success)", marginBottom: 8 }}>BÀN TRỐNG</p>
-              <p style={{ fontSize: 24, fontWeight: 900, color: "var(--success)" }}>{occupancyStats.available_tables}</p>
-            </div>
-            <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <p style={{ fontSize: 12, fontWeight: 900, color: "var(--accent)", marginBottom: 8 }}>TỶ LỆ LẤP ĐẦY</p>
-              <p style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)" }}>{occupancyStats.occupancy_rate}</p>
-            </div>
-          </div>
-        )}
+        {/* STATS */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+          {fetchLoading && !occupancyStats ? (
+            [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 100, borderRadius: 20 }} />)
+          ) : (
+            occupancyStats && (
+              <>
+                <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
+                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8 }}>TỔNG BÀN</p>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: "var(--text-primary)" }}>{occupancyStats.total_tables}</p>
+                </div>
+                <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
+                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--danger)", marginBottom: 8 }}>BÀN ĐANG SỬ DỤNG</p>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: "var(--danger)" }}>{occupancyStats.occupied_tables}</p>
+                </div>
+                <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
+                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--success)", marginBottom: 8 }}>BÀN TRỐNG</p>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: "var(--success)" }}>{occupancyStats.available_tables}</p>
+                </div>
+                <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
+                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--accent)", marginBottom: 8 }}>TỶ LỆ LẤP ĐẦY</p>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)" }}>{occupancyStats.occupancy_rate}</p>
+                </div>
+              </>
+            )
+          )}
+        </div>
 
         {/* MAIN SPLIT */}
         <div style={{ display: "grid", gridTemplateColumns: "7fr 4fr", gap: 32 }}>
@@ -270,28 +277,38 @@ export default function TablesManagementPage() {
             </h3>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 16 }}>
-              {tables.map(table => {
-                const isSelected = selectedTable?.id === table.id;
-                const isAvail = table.status === 'AVAILABLE';
-                return (
-                  <div key={table.id} onClick={() => handleSelectTable(table)} className="table-card" style={{
-                    padding: 16, borderRadius: 16, cursor: "pointer", transition: "0.2s",
-                    background: isSelected ? (isAvail ? "#e6f4ea" : "#fce8e8") : "var(--bg-primary)",
-                    border: `2px solid ${isSelected ? (isAvail ? "var(--success)" : "var(--danger)") : "transparent"}`,
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                      <HiOutlineDesktopComputer size={24} color={isAvail ? "var(--success)" : "var(--danger)"} />
-                      {table.current_order && (
-                        <div style={{ width: 8, height: 8, background: "var(--danger)", borderRadius: "50%" }} />
-                      )}
+              {fetchLoading && tables.length === 0 ? (
+                [1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="skeleton" style={{ height: 100, borderRadius: 16 }} />)
+              ) : (
+                tables.map((table, idx) => {
+                  const isSelected = selectedTable?.id === table.id;
+                  const isAvail = table.status === 'AVAILABLE';
+                  return (
+                    <div 
+                      key={table.id} 
+                      onClick={() => handleSelectTable(table)} 
+                      className="table-card animate-fade-in" 
+                      style={{
+                        padding: 16, borderRadius: 16, cursor: "pointer", transition: "0.2s",
+                        background: isSelected ? (isAvail ? "#e6f4ea" : "#fce8e8") : "var(--bg-primary)",
+                        border: `2px solid ${isSelected ? (isAvail ? "var(--success)" : "var(--danger)") : "transparent"}`,
+                        animationDelay: `${idx * 0.03}s`
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <HiOutlineDesktopComputer size={24} color={isAvail ? "var(--success)" : "var(--danger)"} />
+                        {table.current_order && (
+                          <div style={{ width: 8, height: 8, background: "var(--danger)", borderRadius: "50%" }} />
+                        )}
+                      </div>
+                      <p style={{ fontSize: 14, fontWeight: 900, marginBottom: 4 }}>{table.name}</p>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: isAvail ? "var(--success)" : "var(--danger)" }}>
+                        {isAvail ? "Bàn trống" : "Đang dùng"}
+                      </p>
                     </div>
-                    <p style={{ fontSize: 14, fontWeight: 900, marginBottom: 4 }}>{table.name}</p>
-                    <p style={{ fontSize: 11, fontWeight: 800, color: isAvail ? "var(--success)" : "var(--danger)" }}>
-                      {isAvail ? "Bàn trống" : "Đang dùng"}
-                    </p>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 

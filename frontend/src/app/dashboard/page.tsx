@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getDashboardStats } from "@/lib/api";
+import { getDashboardStats, getBranches } from "@/lib/api";
 import type { DashboardStats } from "@/types";
 import {
   HiCalendar, HiDownload, HiCurrencyDollar,
@@ -52,17 +52,11 @@ export default function DashboardPage() {
 
     // Fetch branches for admin if user is loaded
     if (currentUser?.role === 'ADMIN') {
-      import("@/lib/api").then(api => {
-        api.getBranches().then(setBranches);
-      });
+      getBranches().then(setBranches);
     }
 
     return () => window.removeEventListener("resize", checkMobile);
   }, [currentUser]);
-
-  useEffect(() => {
-    if (currentUser) fetchData();
-  }, [startDate, endDate, currentUser, selectedBranchId]);
 
   const fetchData = async () => {
     if (!currentUser) return;
@@ -76,6 +70,10 @@ export default function DashboardPage() {
       toastError("Lỗi khi tải báo cáo thống kê");
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (currentUser) fetchData();
+  }, [startDate, endDate, currentUser, selectedBranchId]);
 
   const handleRangeSelect = (r: string) => {
     setRange(r);
@@ -104,11 +102,7 @@ export default function DashboardPage() {
     "custom": "Tùy chỉnh khoảng ngày"
   };
 
-  if (loading && !stats) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)", paddingLeft: isMobile ? 0 : 80 }}>
-      <AiOutlineLoading3Quarters size={32} className="spin" color="var(--accent)" />
-    </div>
-  );
+  // No early return for loading to allow skeleton UI
 
   const maxRevenue = Math.max(...(stats?.revenue_by_day.map(d => d.revenue) || [1000000]), 1000000) * 1.2;
 
@@ -175,47 +169,53 @@ export default function DashboardPage() {
 
         {/* METRIC CARDS */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 24, marginBottom: 40 }}>
-          {[
-            {
-              label: "DOANH THU (PERIOD)",
-              value: formatVND(stats?.total_revenue || 0),
-              icon: HiCurrencyDollar,
-              color: "var(--accent)",
-              trend: stats?.comparison?.revenue_change_percent
-            },
-            {
-              label: "ĐƠN HÀNG (SỐ LƯỢNG)",
-              value: stats?.total_orders || 0,
-              icon: HiShoppingCart,
-              color: "var(--accent)",
-              trend: stats?.comparison?.orders_change_percent
-            },
-            { label: "KHUYẾN MÃI (CHẾ KHẤU)", value: formatVND(stats?.total_discount || 0), icon: HiTicket, color: "var(--danger)" },
-            { label: "DOANH THU NET", value: formatVND(stats?.total_net_revenue || 0), icon: HiTrendingUp, color: "var(--success)", trend: stats?.comparison?.revenue_change_percent },
-          ].map((c, i) => (
-            <div key={i} style={{ background: "white", border: "1px solid var(--border)", borderRadius: 24, padding: "32px", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                  <c.icon size={22} color={c.color || "var(--accent)"} />
-                </div>
-                {c.trend !== undefined && (
-                  <div style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: c.trend >= 0 ? "var(--success)" : "var(--danger)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4
-                  }}>
-                    {c.trend >= 0 ? "+" : ""}{c.trend.toFixed(1)}%
-                    <HiTrendingUp style={{ transform: c.trend >= 0 ? "none" : "rotate(90deg)" }} />
+          {loading && !stats ? (
+            [1, 2, 3, 4].map(i => (
+              <div key={i} className="skeleton" style={{ height: 180, borderRadius: 24 }} />
+            ))
+          ) : (
+            [
+              {
+                label: "DOANH THU (PERIOD)",
+                value: formatVND(stats?.total_revenue || 0),
+                icon: HiCurrencyDollar,
+                color: "var(--accent)",
+                trend: stats?.comparison?.revenue_change_percent
+              },
+              {
+                label: "ĐƠN HÀNG (SỐ LƯỢNG)",
+                value: stats?.total_orders || 0,
+                icon: HiShoppingCart,
+                color: "var(--accent)",
+                trend: stats?.comparison?.orders_change_percent
+              },
+              { label: "KHUYẾN MÃI (CHẾ KHẤU)", value: formatVND(stats?.total_discount || 0), icon: HiTicket, color: "var(--danger)" },
+              { label: "DOANH THU NET", value: formatVND(stats?.total_net_revenue || 0), icon: HiTrendingUp, color: "var(--success)", trend: stats?.comparison?.revenue_change_percent },
+            ].map((c, i) => (
+              <div key={i} style={{ background: "white", border: "1px solid var(--border)", borderRadius: 24, padding: "32px", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }} className="animate-fade-in">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                    <c.icon size={22} color={c.color || "var(--accent)"} />
                   </div>
-                )}
+                  {c.trend !== undefined && (
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: c.trend >= 0 ? "var(--success)" : "var(--danger)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4
+                    }}>
+                      {c.trend >= 0 ? "+" : ""}{c.trend.toFixed(1)}%
+                      <HiTrendingUp style={{ transform: c.trend >= 0 ? "none" : "rotate(90deg)" }} />
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 800, letterSpacing: "1px", marginBottom: 6 }}>{c.label}</p>
+                <p style={{ fontSize: 24, fontWeight: 900 }}>{c.value}</p>
               </div>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 800, letterSpacing: "1px", marginBottom: 6 }}>{c.label}</p>
-              <p style={{ fontSize: 24, fontWeight: 900 }}>{c.value}</p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 400px", gap: 32 }}>
@@ -230,7 +230,9 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ position: "relative", height: 380, width: "100%" }}>
-              {stats && (
+              {loading && !stats ? (
+                <div className="skeleton" style={{ height: "100%", width: "100%", borderRadius: 16 }} />
+              ) : ( stats && (
                 <Line
                   data={{
                     labels: stats.revenue_by_day.map(d => format(new Date(d.date), "dd/MM/yyyy")),
@@ -287,7 +289,7 @@ export default function DashboardPage() {
                     }
                   }}
                 />
-              )}
+              ))}
             </div>
           </div>
 
@@ -299,8 +301,12 @@ export default function DashboardPage() {
             <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Sản phẩm bán chạy nhất giai đoạn này</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 12 }}>
-              {stats && stats.top_products.map((p, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              {loading && !stats ? (
+                [1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="skeleton" style={{ height: 40, width: "100%", borderRadius: 12 }} />
+                ))
+              ) : (stats && stats.top_products.map((p, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 20 }} className="animate-fade-in">
                   <div style={{ width: 160, fontSize: 13, fontWeight: 800, color: "var(--text-primary)", textAlign: "right", lineHeight: 1.2 }}>
                     {p.name}
                   </div>
@@ -320,8 +326,8 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
-              {(!stats || stats.top_products.length === 0) && (
+              )))}
+              {!loading && (!stats || stats.top_products.length === 0) && (
                 <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontWeight: 700 }}>Chưa có dữ liệu bán hàng</div>
               )}
             </div>

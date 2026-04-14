@@ -94,17 +94,27 @@ export default function OrdersPage() {
       return () => window.removeEventListener("resize", checkMobile);
    }, [currentUser]);
 
+   // Debounced search to optimize API calls
+   const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+   useEffect(() => {
+      const timer = setTimeout(() => {
+         setDebouncedSearch(search);
+      }, 500);
+      return () => clearTimeout(timer);
+   }, [search]);
+
    // UseEffect for dynamic search and pagination
    useEffect(() => {
       if (currentUser) fetchData();
-   }, [search, page, limit, currentUser, selectedBranchId]);
+   }, [debouncedSearch, page, limit, currentUser, selectedBranchId]);
 
    const fetchData = async () => {
       if (!currentUser) return;
       setLoading(true);
       try {
          const bId = currentUser?.role === 'ADMIN' ? (selectedBranchId || undefined) : currentUser?.branch_id;
-         const res = await getOrders({ page, limit, search, branch_id: bId });
+         const res = await getOrders({ page, limit, search: debouncedSearch, branch_id: bId });
          setOrders((res as any).data || []);
          setTotal((res as any).total || 0);
          setTotalPages((res as any).totalPages || 0);
@@ -301,45 +311,53 @@ export default function OrdersPage() {
                      </tr>
                   </thead>
                   <tbody style={{ position: "relative" }}>
-                     {loading && (
-                        <tr style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
-                           <td colSpan={visibleColumns.length + 1} style={{ textAlign: "center", padding: 40 }}>
-                              <div className="spin" style={{ width: 24, height: 24, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto" }} />
-                           </td>
-                        </tr>
+                     {loading ? (
+                        [1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                           <tr key={i}>
+                              <td colSpan={visibleColumns.length + 1} style={{ padding: "16px 24px" }}>
+                                 <div className="skeleton" style={{ height: 48, borderRadius: 12, width: "100%" }} />
+                              </td>
+                           </tr>
+                        ))
+                     ) : (
+                        orders.map((order, idx) => (
+                           <tr 
+                              key={order.id} 
+                              style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer", animationDelay: `${idx * 0.05}s` }} 
+                              onClick={() => setSelectedOrder(order)}
+                              className="animate-fade-in"
+                           >
+                              {visibleColumns.includes('order_number') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontWeight: 800, fontSize: 14, whiteSpace: "nowrap" }}>{order.order_number}</td>}
+                              {visibleColumns.includes('branch') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{(order as any).branch?.name || "Chi nhánh chính"}</td>}
+                              {visibleColumns.includes('created_at') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, whiteSpace: "nowrap" }}>{formatExactDBTime(order.created_at, "HH:mm • dd/MM/yyyy")}</td>}
+                              {visibleColumns.includes('items') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700 }}>{order.items?.length || 0} món</td>}
+                              {visibleColumns.includes('payment_method') && (
+                                 <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 12, fontWeight: 800 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                       <MdPayment size={16} color="var(--accent)" />
+                                       {order.payment_method === "CASH" ? "TIỀN MẶT" : "CHUYỂN KHOẢN"}
+                                    </div>
+                                 </td>
+                              )}
+                              {visibleColumns.includes('order_type') && (
+                                 <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 12, fontWeight: 800 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                       {order.order_type === "TAKEAWAY" ? <MdOutlineDeliveryDining size={18} color="var(--accent)" /> : <BiDish size={18} color="var(--accent)" />}
+                                       {order.order_type === "TAKEAWAY" ? "MANG ĐI" : "TẠI CHỖ"}
+                                    </div>
+                                 </td>
+                              )}
+                              {visibleColumns.includes('discount_amount') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700, color: "var(--danger)" }}>-{formatVND(order.discount_amount)}</td>}
+                              {visibleColumns.includes('final_amount') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>{formatVND(order.final_amount)}</td>}
+                              {visibleColumns.includes('status') && (
+                                 <td style={{ padding: isMobile ? "12px 16px" : "20px 24px" }}>
+                                    <span className="badge badge-success" style={{ fontSize: 10, whiteSpace: "nowrap" }}>HOÀN TẤT</span>
+                                 </td>
+                              )}
+                              <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", textAlign: "right", color: "var(--text-muted)" }}><HiEye size={20} /></td>
+                           </tr>
+                        ))
                      )}
-                     {orders.map((order) => (
-                        <tr key={order.id} style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }} onClick={() => setSelectedOrder(order)}>
-                           {visibleColumns.includes('order_number') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontWeight: 800, fontSize: 14, whiteSpace: "nowrap" }}>{order.order_number}</td>}
-                           {visibleColumns.includes('branch') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{(order as any).branch?.name || "Chi nhánh chính"}</td>}
-                           {visibleColumns.includes('created_at') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, color: "var(--text-secondary)", fontWeight: 600, whiteSpace: "nowrap" }}>{formatExactDBTime(order.created_at, "HH:mm • dd/MM/yyyy")}</td>}
-                           {visibleColumns.includes('items') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700 }}>{order.items?.length || 0} món</td>}
-                           {visibleColumns.includes('payment_method') && (
-                              <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 12, fontWeight: 800 }}>
-                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <MdPayment size={16} color="var(--accent)" />
-                                    {order.payment_method === "CASH" ? "TIỀN MẶT" : "CHUYỂN KHOẢN"}
-                                 </div>
-                              </td>
-                           )}
-                           {visibleColumns.includes('order_type') && (
-                              <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 12, fontWeight: 800 }}>
-                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    {order.order_type === "TAKEAWAY" ? <MdOutlineDeliveryDining size={18} color="var(--accent)" /> : <BiDish size={18} color="var(--accent)" />}
-                                    {order.order_type === "TAKEAWAY" ? "MANG ĐI" : "TẠI CHỖ"}
-                                 </div>
-                              </td>
-                           )}
-                           {visibleColumns.includes('discount_amount') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontSize: 13, fontWeight: 700, color: "var(--danger)" }}>-{formatVND(order.discount_amount)}</td>}
-                           {visibleColumns.includes('final_amount') && <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", fontWeight: 800, fontSize: 15, color: "var(--text-primary)" }}>{formatVND(order.final_amount)}</td>}
-                           {visibleColumns.includes('status') && (
-                              <td style={{ padding: isMobile ? "12px 16px" : "20px 24px" }}>
-                                 <span className="badge badge-success" style={{ fontSize: 10, whiteSpace: "nowrap" }}>HOÀN TẤT</span>
-                              </td>
-                           )}
-                           <td style={{ padding: isMobile ? "12px 16px" : "20px 24px", textAlign: "right", color: "var(--text-muted)" }}><HiEye size={20} /></td>
-                        </tr>
-                     ))}
                      {!loading && orders.length === 0 && (
                         <tr>
                            <td colSpan={visibleColumns.length + 1} style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", fontWeight: 700 }}>Không tìm thấy đơn hàng nào</td>

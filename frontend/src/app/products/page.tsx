@@ -312,16 +312,45 @@ export default function ProductsManagementPage() {
                 </div>
 
               {fetchLoading ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}><AiOutlineLoading3Quarters size={32} className="spin" color="var(--accent)" /></div>
+                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }}>
+                  <div style={{ marginBottom: 32 }}>
+                    <div className="skeleton" style={{ height: 20, width: 150, marginBottom: 16, borderRadius: 4 }} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 16 }} />)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="skeleton" style={{ height: 20, width: 120, marginBottom: 16, borderRadius: 4 }} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[1, 2].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 16 }} />)}
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }} className="custom-scroll">
+                <div style={{ flex: 1, overflowY: "auto", paddingRight: 16 }} className="custom-scroll animate-fade-in">
                   {/* PRODUCTS */}
                   {(listFilter === 'all' || listFilter === 'product') && (
                     <div style={{ marginBottom: 32 }}>
                       <h4 style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}><HiCollection size={16} /> SẢN PHẨM CHÍNH ({products.length})</h4>
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {products.map(p => (
-                          <div key={p.id} onClick={() => startEditProduct(p)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: editingProductId === p.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
+                        {products.map((p, idx) => (
+                          <div 
+                            key={p.id} 
+                            onClick={() => startEditProduct(p)} 
+                            style={{ 
+                              padding: "16px 20px", 
+                              borderRadius: 16, 
+                              background: "var(--bg-primary)", 
+                              border: editingProductId === p.id ? "2px solid var(--accent)" : "2px solid transparent", 
+                              cursor: "pointer", 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center", 
+                              transition: "0.2s",
+                              animationDelay: `${idx * 0.05}s`
+                            }} 
+                            className="list-item animate-fade-in"
+                          >
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                                 <span style={{ fontSize: 14, fontWeight: 900 }}>{(p as any).name_vi}</span>
@@ -351,8 +380,24 @@ export default function ProductsManagementPage() {
                     <div>
                       <h4 style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}><HiSparkles size={16} /> TOPPING ({toppings.length})</h4>
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {toppings.map(t => (
-                          <div key={t.id} onClick={() => startEditTopping(t)} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)", border: editingToppingId === t.id ? "2px solid var(--accent)" : "2px solid transparent", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "0.2s" }} className="list-item">
+                        {toppings.map((t, idx) => (
+                          <div 
+                            key={t.id} 
+                            onClick={() => startEditTopping(t)} 
+                            style={{ 
+                              padding: "16px 20px", 
+                              borderRadius: 16, 
+                              background: "var(--bg-primary)", 
+                              border: editingToppingId === t.id ? "2px solid var(--accent)" : "2px solid transparent", 
+                              cursor: "pointer", 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center", 
+                              transition: "0.2s",
+                              animationDelay: `${(products.length + idx) * 0.05}s`
+                            }} 
+                            className="list-item animate-fade-in"
+                          >
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                                 <span style={{ fontSize: 14, fontWeight: 900 }}>{t.name}</span>
