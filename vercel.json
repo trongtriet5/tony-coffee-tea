@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/_/backend/:path*",
-      "destination": "https://tony-coffee-api.vercel.app/:path*"
+      "destination": "https://tony-coffee-tea-api.vercel.app/:path*"
     }
   ]
 }
