@@ -28,6 +28,20 @@ export class HealthController {
     };
   }
 
+  @Get('warmup')
+  @ApiOperation({ summary: 'Warmup endpoint to keep function alive' })
+  async warmup() {
+    const startTime = Date.now();
+    
+    await this.prisma.$queryRaw`SELECT 1`;
+    
+    return {
+      warmed: true,
+      timestamp: new Date().toISOString(),
+      initTime: `${Date.now() - startTime}ms`,
+    };
+  }
+
   @Get()
   @ApiOperation({ summary: 'Root endpoint' })
   root() {
@@ -35,6 +49,7 @@ export class HealthController {
       message: 'iPOS API is running',
       docs: '/api/docs',
       health: '/api/health',
+      warmup: '/api/warmup',
       version: '1.0.0',
     };
   }
