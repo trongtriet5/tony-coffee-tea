@@ -14,18 +14,6 @@
       }
     },
     {
-      "src": "/api/products/categories",
-      "headers": {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"
-      }
-    },
-    {
-      "src": "/api/products/toppings",
-      "headers": {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"
-      }
-    },
-    {
       "src": "/(.*)",
       "dest": "src/main.ts"
     }
@@ -34,6 +22,22 @@
     {
       "source": "/api/(.*)",
       "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
         {
           "key": "X-DNS-Prefetch-Control",
           "value": "on"
