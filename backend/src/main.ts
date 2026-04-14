@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-// Fix Timezone to Vietnam (UTC+7)
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 
 let app;
@@ -12,7 +11,6 @@ async function bootstrap() {
   if (!app) {
     app = await NestFactory.create(AppModule);
 
-    // Enable CORS for frontend and mobile app
     const allowedOrigins = process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',')
       : [
@@ -24,13 +22,8 @@ async function bootstrap() {
 
     app.enableCors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-
-        if (
-          allowedOrigins.indexOf(origin) !== -1 ||
-          process.env.NODE_ENV === 'development'
-        ) {
+        if (allowedOrigins.indexOf(origin) !== -1) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
@@ -40,7 +33,6 @@ async function bootstrap() {
       credentials: true,
     });
 
-    // Validation pipe
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -49,10 +41,8 @@ async function bootstrap() {
       }),
     );
 
-    // Global prefix
     app.setGlobalPrefix('api');
 
-    // Swagger
     const config = new DocumentBuilder()
       .setTitle('iPOS API')
       .setDescription('iPOS - F&B Point of Sale System API Documentation')
@@ -64,7 +54,6 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
 
-    // Fix Swagger UI white screen on Vercel
     const customOptions = {
       swaggerOptions: {
         persistAuthorization: true,
@@ -87,13 +76,11 @@ async function bootstrap() {
   return app.getHttpAdapter().getInstance();
 }
 
-// Export for Vercel
 export default async (req: any, res: any) => {
   const instance = await bootstrap();
   return instance(req, res);
 };
 
-// Start local server if not on Vercel
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const startLocal = async () => {
     const localApp = await NestFactory.create(AppModule);

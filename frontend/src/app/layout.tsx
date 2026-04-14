@@ -4,6 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
 import { ToastProvider } from "@/components/ToastProvider";
 import { SWRProvider } from "@/components/SWRProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: {
@@ -18,15 +19,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi">
       <body style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
-        <SWRProvider>
-          <ToastProvider>
-            <Sidebar />
-            <MobileNav />
-            <main style={{ minHeight: "100vh" }}>
-              {children}
-            </main>
-          </ToastProvider>
-        </SWRProvider>
+        <ErrorBoundary>
+          <SWRProvider>
+            <ToastProvider>
+              <Sidebar />
+              <MobileNav />
+              <main style={{ minHeight: "100vh" }}>
+                {children}
+              </main>
+            </ToastProvider>
+          </SWRProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

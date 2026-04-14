@@ -134,9 +134,25 @@ export class MaterialService {
     note: string,
     prisma: any,
   ): Promise<void> {
+    const material = await prisma.material.findUnique({
+      where: { id: materialId },
+      select: { stock_current: true },
+    });
+
+    if (!material) {
+      throw new NotFoundException(`Material ${materialId} not found`);
+    }
+
+    const newStock = material.stock_current - amount;
+    if (newStock < 0) {
+      throw new BadRequestException(
+        `Không đủ nguyên liệu. Còn ${material.stock_current}, cần ${amount}`,
+      );
+    }
+
     const updatedMaterial = await prisma.material.update({
       where: { id: materialId },
-      data: { stock_current: { decrement: amount } },
+      data: { stock_current: newStock },
     });
 
     await prisma.materialTransaction.create({

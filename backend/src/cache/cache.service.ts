@@ -5,17 +5,28 @@ export interface CacheEntry<T> {
   timestamp: number;
 }
 
+interface GlobalCache {
+  cache: Map<string, CacheEntry<any>>;
+}
+
+declare const global: GlobalCache;
+
 @Injectable()
 export class CacheService {
-  private cache = new Map<string, CacheEntry<any>>();
-  private readonly TTL = 60000;
+  private static readonly TTL = 60000;
+
+  constructor() {
+    if (!global.cache) {
+      global.cache = new Map<string, CacheEntry<any>>();
+    }
+  }
 
   get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
+    const entry = global.cache.get(key);
     if (!entry) return null;
 
-    if (Date.now() - entry.timestamp > this.TTL) {
-      this.cache.delete(key);
+    if (Date.now() - entry.timestamp > CacheService.TTL) {
+      global.cache.delete(key);
       return null;
     }
 
@@ -23,22 +34,22 @@ export class CacheService {
   }
 
   set<T>(key: string, data: T): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
+    global.cache.set(key, { data, timestamp: Date.now() });
   }
 
   invalidate(key: string): void {
-    this.cache.delete(key);
+    global.cache.delete(key);
   }
 
   invalidatePattern(pattern: string): void {
-    for (const key of this.cache.keys()) {
+    for (const key of global.cache.keys()) {
       if (key.includes(pattern)) {
-        this.cache.delete(key);
+        global.cache.delete(key);
       }
     }
   }
 
   clear(): void {
-    this.cache.clear();
+    global.cache.clear();
   }
 }

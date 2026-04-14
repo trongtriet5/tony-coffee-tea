@@ -60,6 +60,7 @@ model Topping {
   order_items OrderItemTopping[]
   recipes     ToppingRecipe[]
 
+  @@index([available])
   @@map("toppings")
 }
 
@@ -133,6 +134,7 @@ model OrderItemTopping {
   topping       Topping   @relation(fields: [topping_id], references: [id])
 
   @@index([order_item_id])
+  @@index([topping_id])
   @@map("order_item_toppings")
 }
 
@@ -202,5 +204,6 @@ model Table {
   branch    Branch? @relation(fields: [branch_id], references: [id])
 
   @@index([branch_id])
+  @@index([status])
   @@map("tables")
 }
