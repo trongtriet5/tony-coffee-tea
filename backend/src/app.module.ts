@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+import { CacheModule } from './cache/cache.module';
 import { OrderModule } from './order/order.module';
 import { ProductModule } from './product/product.module';
 import { MaterialModule } from './material/material.module';
@@ -14,6 +15,7 @@ import { EmployeeModule } from './employee/employee.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    CacheModule,
     OrderModule,
     ProductModule,
     MaterialModule,

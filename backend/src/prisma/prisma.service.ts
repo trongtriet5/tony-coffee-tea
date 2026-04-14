@@ -9,14 +9,25 @@ export class PrismaService
   constructor() {
     super({
       log: ['error', 'warn'],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
     });
   }
 
   async onModuleInit() {
-    await this.$connect();
+    if (process.env.VERCEL) {
+      await this.$connect();
+    } else {
+      await this.$connect();
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    if (!process.env.VERCEL) {
+      await this.$disconnect();
+    }
   }
 }

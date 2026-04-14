@@ -205,16 +205,16 @@ export default function OrdersPage() {
                         placeholder="Tìm mã đơn hàng..."
                         value={search}
                         onChange={handleSearchChange}
-                         style={{ width: "100%", padding: isMobile ? "12px 16px 12px 48px" : "14px 16px 14px 48px", borderRadius: 14, border: "1px solid var(--border)", background: "white", fontSize: 14, fontWeight: 600 }}
+                        style={{ width: "100%", padding: isMobile ? "12px 16px 12px 48px" : "14px 16px 14px 48px", borderRadius: 14, border: "1px solid var(--border)", background: "white", fontSize: 14, fontWeight: 600 }}
                      />
                   </div>
-                   <button onClick={handleExportExcel} style={{ flex: isMobile ? "1 1 auto" : "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: isMobile ? "12px 16px" : "14px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
+                  <button onClick={handleExportExcel} style={{ flex: isMobile ? "1 1 auto" : "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: isMobile ? "12px 16px" : "14px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
                      <HiDownload size={20} /> <span style={{ whiteSpace: "nowrap" }}>{isMobile ? "XUẤT" : "XUẤT EXCEL"}</span>
                   </button>
 
 
                   <div style={{ position: "relative", flex: isMobile ? "1 1 auto" : "none" }}>
-                      <button onClick={() => setShowColumnPicker(!showColumnPicker)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: isMobile ? "12px 16px" : "14px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
+                     <button onClick={() => setShowColumnPicker(!showColumnPicker)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: isMobile ? "12px 16px" : "14px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>
                         <HiViewColumns size={20} /> {isMobile ? "CỘT" : "CỘT HIỂN THỊ"}
                      </button>
                      {showColumnPicker && (

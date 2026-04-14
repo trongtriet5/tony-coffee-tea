@@ -7,13 +7,16 @@ import {
   Body,
   Param,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, CreateToppingDto } from './dto/product.dto';
+import { CacheInterceptor } from '../cache/cache.interceptor';
 
 @ApiTags('products')
 @Controller('products')
+@UseInterceptors(CacheInterceptor)
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 

@@ -3,6 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
 import { ToastProvider } from "@/components/ToastProvider";
+import { SWRProvider } from "@/components/SWRProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -17,13 +18,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi">
       <body style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
-        <ToastProvider>
-          <Sidebar />
-          <MobileNav />
-          <main style={{ minHeight: "100vh" }}>
-            {children}
-          </main>
-        </ToastProvider>
+        <SWRProvider>
+          <ToastProvider>
+            <Sidebar />
+            <MobileNav />
+            <main style={{ minHeight: "100vh" }}>
+              {children}
+            </main>
+          </ToastProvider>
+        </SWRProvider>
       </body>
     </html>
   );

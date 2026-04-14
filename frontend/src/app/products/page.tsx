@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { createProduct, updateProduct, getProducts, getCategories, createTopping, updateTopping, getToppings, deleteProduct, deleteTopping } from "@/lib/api";
+import { useProducts, useCategories, useToppings, optimisticCreateProduct, optimisticUpdateProduct, optimisticDeleteProduct, optimisticCreateTopping, optimisticUpdateTopping, optimisticDeleteTopping, refreshProducts } from "@/lib/useProducts";
 import type { Product, Topping } from "@/types";
 import { HiPlus, HiCollection, HiSparkles, HiCheck, HiPencilAlt, HiBadgeCheck, HiBan, HiTrash } from "react-icons/hi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -11,13 +12,13 @@ export default function ProductsManagementPage() {
   const currentUser = useCurrentUser();
   const { success: toastSuccess, error: toastError } = useToast();
   const [activeTab, setActiveTab] = useState<"product" | "topping">("product");
-  const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [toppings, setToppings] = useState<Topping[]>([]);
   const [listFilter, setListFilter] = useState<"all" | "product" | "topping">("all");
 
   const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
+  const { products, isLoading: productsLoading, mutate: mutateProducts } = useProducts(true);
+  const { categories, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories();
+  const { toppings, isLoading: toppingsLoading, mutate: mutateToppings } = useToppings(true);
+  const fetchLoading = productsLoading || categoriesLoading || toppingsLoading;
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState({ name_vi: "", name_en: "", price: "", category: "Cà Phê", available: true });
@@ -33,25 +34,11 @@ export default function ProductsManagementPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
-
-  const fetchData = async () => {
-    setFetchLoading(true);
-    try {
-      const [cats, prods, tops] = await Promise.all([
-        getCategories(),
-        getProducts({ all: true }),
-        getToppings({ all: true })
-      ]);
-      setCategories(cats);
-      setProducts(prods);
-      setToppings(tops);
-    } catch (e) { console.error(e); }
-    finally { setFetchLoading(false); }
+  const handleRefresh = () => {
+    refreshProducts();
+    mutateProducts();
+    mutateCategories();
+    mutateToppings();
   };
 
 
@@ -69,16 +56,15 @@ export default function ProductsManagementPage() {
       };
 
       if (editingProductId) {
-        await updateProduct(editingProductId, payload as any);
+        await optimisticUpdateProduct(editingProductId, payload as any);
         toastSuccess("Cập nhật món thành công!");
       } else {
-        await createProduct(payload as any);
+        await optimisticCreateProduct(payload as any);
         toastSuccess("Đã thêm món mới thành công!");
       }
 
       setProductForm({ name_vi: "", name_en: "", price: "", category: productForm.category, available: true });
       setEditingProductId(null);
-      fetchData();
     } catch (error) {
       toastError("Có lỗi xảy ra khi xử lý món");
     } finally { setLoading(false); }
@@ -95,15 +81,14 @@ export default function ProductsManagementPage() {
         available: toppingForm.available
       };
       if (editingToppingId) {
-        await updateTopping(editingToppingId, payload);
+        await optimisticUpdateTopping(editingToppingId, payload);
         toastSuccess("Cập nhật topping thành công!");
       } else {
-        await createTopping(payload);
+        await optimisticCreateTopping(payload);
         toastSuccess("Đã thêm topping mới thành công!");
       }
       setToppingForm({ name: "", price: "", available: true });
       setEditingToppingId(null);
-      fetchData();
     } catch (error) {
       toastError("Có lỗi xảy ra khi xử lý topping");
     } finally { setLoading(false); }
@@ -127,9 +112,8 @@ export default function ProductsManagementPage() {
     if (result.isConfirmed) {
       try {
         setLoading(true);
-        await deleteProduct(id);
+        await optimisticDeleteProduct(id);
         toastSuccess("Xóa món thành công!");
-        fetchData();
       } catch (error: any) {
         toastError(error.response?.data?.message || "Có lỗi xảy ra khi xóa món");
       } finally { setLoading(false); }
@@ -154,9 +138,8 @@ export default function ProductsManagementPage() {
     if (result.isConfirmed) {
       try {
         setLoading(true);
-        await deleteTopping(id);
+        await optimisticDeleteTopping(id);
         toastSuccess("Xóa topping thành công!");
-        fetchData();
       } catch (error: any) {
         toastError(error.response?.data?.message || "Có lỗi xảy ra khi xóa topping");
       } finally { setLoading(false); }

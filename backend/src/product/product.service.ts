@@ -1,81 +1,125 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MaterialService } from '../material/material.service';
+import { CacheService } from '../cache/cache.service';
+
+const CACHE_KEYS = {
+  PRODUCTS_ALL: 'products:all',
+  PRODUCTS_AVAILABLE: 'products:available',
+  TOPPINGS_ALL: 'toppings:all',
+  TOPPINGS_AVAILABLE: 'toppings:available',
+  CATEGORIES: 'categories',
+};
+
+interface CachedProduct {
+  id: string;
+  name_vi: string;
+  name_en: string;
+  category: string;
+  available: boolean;
+  variants: any[];
+  has_recipe: boolean;
+}
+
+interface CachedTopping {
+  id: string;
+  name: string;
+  price: number;
+  available: boolean;
+  has_recipe: boolean;
+}
 
 @Injectable()
 export class ProductService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly materialService: MaterialService,
+    private readonly cache: CacheService,
   ) {}
 
   async findAll(includeUnavailable?: boolean) {
+    const cacheKey = includeUnavailable ? CACHE_KEYS.PRODUCTS_ALL : CACHE_KEYS.PRODUCTS_AVAILABLE;
+    const cached = this.cache.get<CachedProduct[]>(cacheKey);
+    if (cached) return cached;
+
     const products = await this.prisma.product.findMany({
       where: includeUnavailable ? undefined : { available: true },
       include: {
         variants: {
           include: {
-            recipes: { take: 1 }, // Just check if any recipe exists
+            recipes: { take: 1 },
           },
         },
       },
       orderBy: [{ category: 'asc' }, { name_vi: 'asc' }],
     });
 
-    // POS doesn't need cost calculation, only CMS does.
-    // For now, let's just optimize the existing logic to be much faster.
-    return products.map((p) => {
+    const result = products.map((p) => {
       let productHasRecipe = false;
       const enrichedVariants = p.variants.map((v) => {
         const hasRecipe = v.recipes.length > 0;
         if (hasRecipe) productHasRecipe = true;
-        // Cost is 0 for POS by default, we can add a specific param for CMS if needed
         return { ...v, cost: 0, has_recipe: hasRecipe };
       });
       return { ...p, variants: enrichedVariants, has_recipe: productHasRecipe };
     });
+
+    this.cache.set(cacheKey, result);
+    return result;
   }
 
   async getToppings(includeUnavailable?: boolean) {
+    const cacheKey = includeUnavailable ? CACHE_KEYS.TOPPINGS_ALL : CACHE_KEYS.TOPPINGS_AVAILABLE;
+    const cached = this.cache.get<CachedTopping[]>(cacheKey);
+    if (cached) return cached;
+
     const toppings = await this.prisma.topping.findMany({
       where: includeUnavailable ? undefined : { available: true },
       include: { recipes: { take: 1 } },
       orderBy: { name: 'asc' },
     });
 
-    return toppings.map((t) => ({
+    const result = toppings.map((t) => ({
       ...t,
       cost: 0,
       has_recipe: t.recipes.length > 0,
     }));
+
+    this.cache.set(cacheKey, result);
+    return result;
   }
 
   async getCategories() {
+    const cached = this.cache.get<{ category: string; count: number }[]>(CACHE_KEYS.CATEGORIES);
+    if (cached) return cached;
+
     const results = await this.prisma.product.groupBy({
       by: ['category'],
       where: { available: true },
       _count: true,
     });
-    return results.map((r) => ({ category: r.category, count: r._count }));
+    const result = results.map((r) => ({ category: r.category, count: r._count }));
+    this.cache.set(CACHE_KEYS.CATEGORIES, result);
+    return result;
   }
 
   async createProduct(data: any) {
-    return this.prisma.product.create({
+    const result = await this.prisma.product.create({
       data: {
         name_vi: data.name_vi,
         name_en: data.name_en,
         category: data.category,
         available: data.available ?? true,
         variants: {
-          create: data.variants || [], // Variants contain size and price
+          create: data.variants || [],
         },
       },
       include: { variants: true },
     });
+    this.invalidateProductsCache();
+    return result;
   }
 
   async updateProduct(id: string, data: any) {
-    return this.prisma.product.update({
+    const result = await this.prisma.product.update({
       where: { id },
       data: {
         name_vi: data.name_vi,
@@ -84,20 +128,24 @@ export class ProductService {
         available: data.available,
       },
     });
+    this.invalidateProductsCache();
+    return result;
   }
 
   async createTopping(data: any) {
-    return this.prisma.topping.create({
+    const result = await this.prisma.topping.create({
       data: {
         name: data.name,
         price: data.price,
         available: data.available ?? true,
       },
     });
+    this.invalidateToppingsCache();
+    return result;
   }
 
   async updateTopping(id: string, data: any) {
-    return this.prisma.topping.update({
+    const result = await this.prisma.topping.update({
       where: { id },
       data: {
         name: data.name,
@@ -105,9 +153,10 @@ export class ProductService {
         available: data.available,
       },
     });
+    this.invalidateToppingsCache();
+    return result;
   }
 
-  // Import/Export Logic
   async exportMenu() {
     const products = await this.findAll(true);
     const toppings = await this.getToppings(true);
@@ -121,11 +170,11 @@ export class ProductService {
     for (const t of data.toppings) {
       await this.createTopping(t);
     }
+    this.invalidateAllProductCaches();
     return { success: true };
   }
 
   async deleteProduct(id: string) {
-    // Check if product is in any order history
     const orderItemCount = await this.prisma.orderItem.count({
       where: { product_id: id },
     });
@@ -135,7 +184,6 @@ export class ProductService {
       );
     }
 
-    // Delete variants first (and their recipes)
     const variants = await this.prisma.productVariant.findMany({
       where: { product_id: id },
     });
@@ -145,11 +193,12 @@ export class ProductService {
       });
     }
     await this.prisma.productVariant.deleteMany({ where: { product_id: id } });
-    return this.prisma.product.delete({ where: { id } });
+    const result = await this.prisma.product.delete({ where: { id } });
+    this.invalidateProductsCache();
+    return result;
   }
 
   async deleteTopping(id: string) {
-    // Check if topping is in any order history
     const orderItemToppingCount = await this.prisma.orderItemTopping.count({
       where: { topping_id: id },
     });
@@ -160,6 +209,25 @@ export class ProductService {
     }
 
     await this.prisma.toppingRecipe.deleteMany({ where: { topping_id: id } });
-    return this.prisma.topping.delete({ where: { id } });
+    const result = await this.prisma.topping.delete({ where: { id } });
+    this.invalidateToppingsCache();
+    return result;
+  }
+
+  private invalidateProductsCache() {
+    this.cache.invalidate(CACHE_KEYS.PRODUCTS_ALL);
+    this.cache.invalidate(CACHE_KEYS.PRODUCTS_AVAILABLE);
+    this.cache.invalidate(CACHE_KEYS.CATEGORIES);
+  }
+
+  private invalidateToppingsCache() {
+    this.cache.invalidate(CACHE_KEYS.TOPPINGS_ALL);
+    this.cache.invalidate(CACHE_KEYS.TOPPINGS_AVAILABLE);
+  }
+
+  private invalidateAllProductCaches() {
+    this.cache.invalidatePattern('products');
+    this.cache.invalidatePattern('toppings');
+    this.cache.invalidate(CACHE_KEYS.CATEGORIES);
   }
 }
