@@ -185,8 +185,8 @@ export default function ProductsManagementPage() {
     setToppingForm({ name: "", price: "", available: true });
   };
 
-  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
+  const labelStyle = { fontSize: 13, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -195,8 +195,8 @@ export default function ProductsManagementPage() {
         {/* HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý món</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Quản lý danh mục Sản phẩm & Topping</p>
+            <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 8 }}>Quản lý món</h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 700 }}>Quản lý danh mục Sản phẩm & Topping</p>
           </div>
         </div>
 
@@ -206,19 +206,19 @@ export default function ProductsManagementPage() {
           {/* LEFT: FORM SECTION */}
           <div>
             <div style={{ display: "flex", gap: 10, marginBottom: 24, background: "white", padding: 6, borderRadius: 16, border: "1px solid var(--border)" }}>
-              <button onClick={() => { setActiveTab("product"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "product" ? "var(--accent)" : "transparent", color: activeTab === "product" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
+              <button onClick={() => { setActiveTab("product"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "product" ? "var(--accent)" : "transparent", color: activeTab === "product" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
                 <HiCollection size={16} /> MÓN CHÍNH
               </button>
-              <button onClick={() => { setActiveTab("topping"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "topping" ? "var(--accent)" : "transparent", color: activeTab === "topping" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
+              <button onClick={() => { setActiveTab("topping"); cancelEdit(); }} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: activeTab === "topping" ? "var(--accent)" : "transparent", color: activeTab === "topping" ? "white" : "var(--text-muted)", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "0.2s" }}>
                 <HiSparkles size={16} /> TOPPING
               </button>
             </div>
 
             <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {activeTab === "product" ? (editingProductId ? "SỬA MÓN CHÍNH" : (currentUser?.role === 'ADMIN' ? "THÊM MÓN CHÍNH" : "CHỌN MÓN ĐỂ SỬA")) : (editingToppingId ? "SỬA TOPPING" : (currentUser?.role === 'ADMIN' ? "THÊM TOPPING" : "CHỌN TOPPING ĐỂ SỬA"))}
                 {(editingProductId || editingToppingId) && (
-                  <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 11, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
+                  <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 13, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
                 )}
               </h3>
 
@@ -353,10 +353,10 @@ export default function ProductsManagementPage() {
                           >
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                <span style={{ fontSize: 14, fontWeight: 900 }}>{(p as any).name_vi}</span>
+                                <span style={{ fontSize: 16, fontWeight: 900 }}>{(p as any).name_vi}</span>
                                 {p.available ? <HiBadgeCheck size={16} color="var(--success)" /> : <HiBan size={16} color="var(--danger)" />}
                               </div>
-                              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", display: "flex", gap: 8 }}>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-secondary)", display: "flex", gap: 8 }}>
                                 <span style={{ background: "white", padding: "2px 8px", borderRadius: 6 }}>{(p as any).category}</span>
                                 <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((p as any).price ?? (p.variants?.length > 0 ? Math.min(...p.variants.map((v: any) => v.price)) : 0))}</span>
                               </div>

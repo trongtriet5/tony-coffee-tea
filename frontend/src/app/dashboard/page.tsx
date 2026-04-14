@@ -111,8 +111,8 @@ export default function DashboardPage() {
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 40 }}>
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 900 }}>Báo cáo bán hàng</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Phân tích tài chính Tony Coffee & Tea</p>
+            <h1 style={{ fontSize: 36, fontWeight: 900 }}>Báo cáo bán hàng</h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 700 }}>Phân tích tài chính Tony Coffee & Tea</p>
           </div>
           <div style={{ display: "flex", gap: 16 }}>
             {currentUser?.role === 'ADMIN' && (
@@ -120,7 +120,7 @@ export default function DashboardPage() {
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  style={{ padding: "12px 24px", paddingRight: 40, borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 13, fontWeight: 800, cursor: "pointer", outline: "none", appearance: "none", minWidth: 240 }}
+                  style={{ padding: "12px 24px", paddingRight: 40, borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 15, fontWeight: 800, cursor: "pointer", outline: "none", appearance: "none", minWidth: 240 }}
                 >
                   <option value="">Tất cả chi nhánh</option>
                   {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -132,7 +132,7 @@ export default function DashboardPage() {
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => setShowRangeDropdown(!showRangeDropdown)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", width: "fit-content" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderRadius: 14, background: "white", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", width: "fit-content" }}
               >
                 <HiCalendar size={18} /> {rangeLabels[range].toUpperCase()} <HiChevronDown size={16} />
               </button>
@@ -157,12 +157,10 @@ export default function DashboardPage() {
         {range === 'custom' && (
           <div style={{ display: "flex", gap: 16, marginBottom: 32, background: "white", padding: 24, borderRadius: 24, border: "1px solid var(--border)", width: "fit-content" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>TỪ NGÀY</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none" }} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 11, fontWeight: 900, color: "var(--text-muted)" }}>ĐẾN NGÀY</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none" }} />
+              <label style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)" }}>TỪ NGÀY</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 14, fontWeight: 700, outline: "none" }} />
+              <label style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)" }}>ĐẾN NGÀY</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 14, fontWeight: 700, outline: "none" }} />
             </div>
           </div>
         )}
@@ -211,8 +209,8 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 800, letterSpacing: "1px", marginBottom: 6 }}>{c.label}</p>
-                <p style={{ fontSize: 24, fontWeight: 900 }}>{c.value}</p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 800, letterSpacing: "1px", marginBottom: 6 }}>{c.label}</p>
+                <p style={{ fontSize: 28, fontWeight: 900 }}>{c.value}</p>
               </div>
             ))
           )}
@@ -223,8 +221,8 @@ export default function DashboardPage() {
           <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "48px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 48 }}>
               <div>
-                <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Revenue Flow</h3>
-                <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700 }}>Biến động doanh thu trong giai đoạn chọn</p>
+                <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>Revenue Flow</h3>
+                <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700 }}>Biến động doanh thu trong giai đoạn chọn</p>
               </div>
               {loading && <AiOutlineLoading3Quarters className="spin" color="var(--accent)" />}
             </div>
@@ -295,10 +293,10 @@ export default function DashboardPage() {
 
           {/* TOP PRODUCTS CHART */}
           <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "40px" }}>
-            <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+            <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
               <HiStar color="var(--accent)" /> Top Performance
             </h3>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Sản phẩm bán chạy nhất giai đoạn này</p>
+            <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Sản phẩm bán chạy nhất giai đoạn này</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 12 }}>
               {loading && !stats ? (

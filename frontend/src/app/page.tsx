@@ -70,8 +70,14 @@ const numberToWords = (num: number): string => {
 
 const ReceiptTemplate = ({ order, branch }: { order: Order; branch?: Branch }) => {
   const totalQty = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+  const bankCode = process.env.NEXT_PUBLIC_BANK_CODE || 'Techcombank';
+  const bankAccount = process.env.NEXT_PUBLIC_BANK_ACCOUNT || '19038133016013';
+  const businessName = process.env.NEXT_PUBLIC_BUSINESS_NAME || 'Tony Coffee & Tea';
+  const businessAddress = process.env.NEXT_PUBLIC_BUSINESS_ADDRESS || branch?.address || '123 Đường ABC, Quận 1, TP.HCM';
+  const businessPhone = branch?.phone || '0123456789';
+  const wifiName = process.env.NEXT_PUBLIC_WIFI_NAME || 'leanhxuan';
   const qrUrl = order.payment_method === 'BANK_TRANSFER'
-    ? `https://img.vietqr.io/image/Techcombank-19038133016013-qr_only.png?amount=${order.final_amount}&addInfo=Thanh toan don hang ${order.order_number}`
+    ? `https://img.vietqr.io/image/${bankCode}-${bankAccount}-qr_only.png?amount=${order.final_amount}&addInfo=Thanh toan don hang ${order.order_number}`
     : null;
 
   return (
@@ -86,9 +92,9 @@ const ReceiptTemplate = ({ order, branch }: { order: Order; branch?: Branch }) =
     }}>
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: "15px" }}>
-        <h2 style={{ fontSize: "18px", fontWeight: "bold", margin: "0 0 4px" }}>TONY COFFEE & TEA</h2>
-        <p style={{ margin: "2px 0", fontSize: "11px" }}>{branch?.address || "123 Đường ABC, Quận 1, TP.HCM"}</p>
-        <p style={{ margin: "2px 0", fontSize: "11px" }}>ĐT: {branch?.phone || "0123456789"}</p>
+        <h2 style={{ fontSize: "18px", fontWeight: "bold", margin: "0 0 4px" }}>{businessName}</h2>
+        <p style={{ margin: "2px 0", fontSize: "11px" }}>{businessAddress}</p>
+        <p style={{ margin: "2px 0", fontSize: "11px" }}>ĐT: {businessPhone}</p>
       </div>
 
       <div style={{ textAlign: "center", marginBottom: "15px" }}>
@@ -109,7 +115,7 @@ const ReceiptTemplate = ({ order, branch }: { order: Order; branch?: Branch }) =
           <span style={{ fontWeight: "bold", fontSize: "16px" }}>{(order as any).table?.name || order.table_id || "Mang đi"}</span>
         </div>
         <div style={{ fontSize: "11px", marginTop: "4px", display: "flex", justifyContent: "space-between" }}>
-          <span>Thu ngân: {branch?.name || "Tony Coffee & Tea chi nhánh 1"}</span>
+          <span>Thu ngân: {branch?.name || businessName}</span>
           <span style={{ fontWeight: "bold" }}>Lần in: {order.print_count || 1}</span>
         </div>
       </div>
@@ -181,8 +187,8 @@ const ReceiptTemplate = ({ order, branch }: { order: Order; branch?: Branch }) =
       {/* Footer */}
       <div style={{ textAlign: "center", marginTop: "20px", borderTop: "1px dashed black", paddingTop: "15px" }}>
         <p style={{ margin: "0", fontWeight: "bold" }}>Cảm Ơn Quý Khách - Hẹn Gặp Lại</p>
-        <p style={{ margin: "4px 0 0", fontSize: "10px" }}>Tony Coffee & Tea - Đánh thức mọi giác quan</p>
-        <p style={{ margin: "4px 0 0", fontSize: "10px" }}>Wifi: leanhxuan</p>
+        <p style={{ margin: "4px 0 0", fontSize: "10px" }}>{businessName} - Đánh thức mọi giác quan</p>
+        <p style={{ margin: "4px 0 0", fontSize: "10px" }}>Wifi: {wifiName}</p>
       </div>
     </div>
   );
@@ -576,15 +582,15 @@ export default function POSPage() {
 
           <div style={{ position: "relative", width: isMobile ? "120px" : "320px" }}>
             <HiSearch size={18} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-            <input type="text" placeholder="Tìm..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: "100%", background: "white", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px 12px 42px", fontSize: 13, fontWeight: 600, outline: "none" }} />
+            <input type="text" placeholder="Tìm..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: "100%", background: "white", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px 12px 42px", fontSize: 14, fontWeight: 600, outline: "none" }} />
           </div>
         </div>
 
         {/* Categories Scroller */}
         <div style={{ display: "flex", gap: 10, padding: isMobile ? "12px 20px" : "0 0 28px", overflowX: "auto" }}>
-          <button onClick={() => setSelectedCategory("all")} style={{ padding: "10px 22px", borderRadius: 12, border: selectedCategory === "all" ? "none" : "1px solid var(--border)", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 800, fontSize: 13, background: selectedCategory === "all" ? "var(--gold-gradient)" : "white", color: selectedCategory === "all" ? "white" : "var(--text-secondary)" }}>TẤT CẢ</button>
+          <button onClick={() => setSelectedCategory("all")} style={{ padding: "10px 22px", borderRadius: 12, border: selectedCategory === "all" ? "none" : "1px solid var(--border)", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 800, fontSize: 14, background: selectedCategory === "all" ? "var(--gold-gradient)" : "white", color: selectedCategory === "all" ? "white" : "var(--text-secondary)" }}>TẤT CẢ</button>
           {categories.map((cat) => (
-            <button key={cat} onClick={() => setSelectedCategory(cat)} style={{ padding: "10px 22px", borderRadius: 12, border: selectedCategory === cat ? "none" : "1px solid var(--border)", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 800, fontSize: 13, background: selectedCategory === cat ? "var(--gold-gradient)" : "white", color: selectedCategory === cat ? "white" : "var(--text-secondary)" }}>
+            <button key={cat} onClick={() => setSelectedCategory(cat)} style={{ padding: "10px 22px", borderRadius: 12, border: selectedCategory === cat ? "none" : "1px solid var(--border)", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 800, fontSize: 14, background: selectedCategory === cat ? "var(--gold-gradient)" : "white", color: selectedCategory === cat ? "white" : "var(--text-secondary)" }}>
               {cat.toUpperCase()}
             </button>
           ))}
@@ -601,7 +607,7 @@ export default function POSPage() {
                   <Icon size={28} color="var(--accent)" />
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{p.name_vi}</p>
-                {p.variants?.length > 1 && <p style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8 }}>{p.variants.length} CỠ SIZE</p>}
+                {p.variants?.length > 1 && <p style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8 }}>{p.variants.length} CỠ SIZE</p>}
                 <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 16, fontWeight: 900, color: "var(--accent)" }}>{formatVND(minPrice)}{p.variants?.length > 1 ? '+' : ''}</span>
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: "var(--gold-gradient)", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}><HiPlus size={20} /></div>
@@ -633,7 +639,7 @@ export default function POSPage() {
                       )}
                     </div>
                     {(item.selectedToppings || []).length > 0 && (
-                      <p style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
+                      <p style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>
                         + {Object.entries(item.selectedToppings?.reduce((acc: any, t) => { acc[t.name] = (acc[t.name] || 0) + 1; return acc; }, {}) || {}).map(([name, qty]) => `${name} x${qty}`).join(', ')}
                       </p>
                     )}
@@ -655,12 +661,12 @@ export default function POSPage() {
           {/* Billing Area */}
           <div style={{ padding: "32px 28px", background: "var(--bg-primary)", borderTop: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ fontWeight: 800, fontSize: 13, color: "var(--text-secondary)" }}>TỔNG CỘNG</span>
+              <span style={{ fontWeight: 800, fontSize: 14, color: "var(--text-secondary)" }}>TỔNG CỘNG</span>
               <span style={{ fontWeight: 800, fontSize: 15 }}>{formatVND(totalAmount)}</span>
             </div>
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <span style={{ fontWeight: 800, fontSize: 13, color: "var(--text-secondary)" }}>GIẢM GIÁ</span>
+              <span style={{ fontWeight: 800, fontSize: 14, color: "var(--text-secondary)" }}>GIẢM GIÁ</span>
               <input 
                 type="number" 
                 value={discount || ""} 
@@ -816,7 +822,7 @@ export default function POSPage() {
 
             <div style={{ background: "white", padding: 12, borderRadius: 16, border: "1px solid var(--border)", marginBottom: 20 }}>
               <img
-                src={`https://img.vietqr.io/image/Techcombank-19038133016013-print.jpg?amount=${paymentPending.final_amount}&addInfo=Thanh toan don hang ${paymentPending.order_number}&accountName=Nguyen Trong Triet`}
+                src={`https://img.vietqr.io/image/${process.env.NEXT_PUBLIC_BANK_CODE || 'Techcombank'}-${process.env.NEXT_PUBLIC_BANK_ACCOUNT || '19038133016013'}-print.jpg?amount=${paymentPending.final_amount}&addInfo=Thanh toan don hang ${paymentPending.order_number}&accountName=${process.env.NEXT_PUBLIC_BUSINESS_NAME || 'Tony Coffee'}`}
                 alt="VietQR"
                 style={{ width: "100%", borderRadius: 12 }}
               />

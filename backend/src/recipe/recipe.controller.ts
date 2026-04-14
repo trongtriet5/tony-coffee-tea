@@ -15,7 +15,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { RecipeService } from './recipe.service';
-import { CreateProductRecipeDto, CreateToppingRecipeDto } from './dto/recipe.dto';
+import {
+  CreateProductRecipeDto,
+  CreateToppingRecipeDto,
+} from './dto/recipe.dto';
 
 @Controller('recipes')
 export class RecipeController {
@@ -43,7 +46,7 @@ export class RecipeController {
     // Note: If productId is passed, we might need a way to find first variant or sum all variants.
     // Usually cost is per variant (Size).
     // For now, let's assume we want a generic cost or the first one found.
-    return this.recipeService.getProductCost(productId); 
+    return this.recipeService.getProductCost(productId);
   }
 
   @Get('variants/:variantId/cost')
@@ -52,7 +55,10 @@ export class RecipeController {
   }
 
   @Put('products/:id')
-  async updateProductRecipe(@Param('id') id: string, @Body('quantity') quantity: number) {
+  async updateProductRecipe(
+    @Param('id') id: string,
+    @Body('quantity') quantity: number,
+  ) {
     return this.recipeService.updateProductRecipe(id, { quantity });
   }
 
@@ -80,7 +86,10 @@ export class RecipeController {
   }
 
   @Put('toppings/:id')
-  async updateToppingRecipe(@Param('id') id: string, @Body('quantity') quantity: number) {
+  async updateToppingRecipe(
+    @Param('id') id: string,
+    @Body('quantity') quantity: number,
+  ) {
     return this.recipeService.updateToppingRecipe(id, { quantity });
   }
 
@@ -95,7 +104,8 @@ export class RecipeController {
   async exportExcel(@Res() res: Response) {
     const buffer = await this.recipeService.exportRecipes();
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="recipes.xlsx"',
     });
     res.send(buffer);
@@ -105,7 +115,8 @@ export class RecipeController {
   async exportTemplate(@Res() res: Response) {
     const buffer = await this.recipeService.generateTemplate();
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="recipe_template.xlsx"',
     });
     res.send(buffer);

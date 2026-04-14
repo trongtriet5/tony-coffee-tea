@@ -1,4 +1,12 @@
-import { IsString, IsArray, IsNumber, IsOptional, ValidateNested, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsNumber,
+  IsOptional,
+  ValidateNested,
+  IsNotEmpty,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -15,9 +23,14 @@ export class CreateOrderItemDto {
 
   @ApiProperty({ example: 2, description: 'Số lượng' })
   @IsNumber()
+  @Min(1)
   quantity: number;
 
-  @ApiPropertyOptional({ type: [String], example: ['top_abc'], description: 'Danh sách ID topping' })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['top_abc'],
+    description: 'Danh sách ID topping',
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
@@ -30,7 +43,10 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ type: [CreateOrderItemDto], description: 'Danh sách món trong đơn hàng' })
+  @ApiProperty({
+    type: [CreateOrderItemDto],
+    description: 'Danh sách món trong đơn hàng',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
@@ -41,22 +57,34 @@ export class CreateOrderDto {
   @IsNotEmpty()
   branch_id: string;
 
-  @ApiProperty({ example: 'CASH', description: 'Phương thức thanh toán: CASH, CARD, TRANSFER' })
+  @ApiProperty({
+    example: 'CASH',
+    description: 'Phương thức thanh toán: CASH, CARD, TRANSFER',
+  })
   @IsString()
   @IsNotEmpty()
   payment_method: string;
 
-  @ApiPropertyOptional({ example: 'TAKEAWAY', description: 'Loại đơn: TAKEAWAY | DINE_IN' })
+  @ApiPropertyOptional({
+    example: 'TAKEAWAY',
+    description: 'Loại đơn: TAKEAWAY | DINE_IN',
+  })
   @IsString()
   @IsOptional()
   order_type?: string;
 
-  @ApiPropertyOptional({ example: 'POS', description: 'Nguồn đơn: POS, GRAB, SHOPEE, WEB' })
+  @ApiPropertyOptional({
+    example: 'POS',
+    description: 'Nguồn đơn: POS, GRAB, SHOPEE, WEB',
+  })
   @IsString()
   @IsOptional()
   source?: string;
 
-  @ApiPropertyOptional({ example: 'table_01', description: 'ID bàn (bắt buộc nếu DINE_IN)' })
+  @ApiPropertyOptional({
+    example: 'table_01',
+    description: 'ID bàn (bắt buộc nếu DINE_IN)',
+  })
   @IsString()
   @IsOptional()
   table_id?: string;
@@ -66,12 +94,18 @@ export class CreateOrderDto {
   @IsOptional()
   cashier_id?: string;
 
-  @ApiPropertyOptional({ example: 'Khách VIP', description: 'Ghi chú đơn hàng' })
+  @ApiPropertyOptional({
+    example: 'Khách VIP',
+    description: 'Ghi chú đơn hàng',
+  })
   @IsString()
   @IsOptional()
   note?: string;
 
-  @ApiPropertyOptional({ example: 10000, description: 'Số tiền giảm giá (VND)' })
+  @ApiPropertyOptional({
+    example: 10000,
+    description: 'Số tiền giảm giá (VND)',
+  })
   @IsNumber()
   @IsOptional()
   discount_amount?: number;

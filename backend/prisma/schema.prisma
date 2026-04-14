@@ -101,7 +101,7 @@ model Order {
   @@index([table_id])
   @@index([created_at])
   @@index([status])
-  @@map("branches_orders")
+  @@map("orders")
 }
 
 model OrderItem {

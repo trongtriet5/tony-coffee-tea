@@ -22,13 +22,15 @@ export class EmployeeController {
 
   @Post()
   create(@Body() dto: any, @Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can create accounts');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can create accounts');
     return this.employeeService.create(dto);
   }
 
   @Get()
   findAll(@Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can view all accounts');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can view all accounts');
     return this.employeeService.findAll();
   }
 
@@ -50,7 +52,8 @@ export class EmployeeController {
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can delete accounts');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can delete accounts');
     return this.employeeService.remove(id);
   }
 }

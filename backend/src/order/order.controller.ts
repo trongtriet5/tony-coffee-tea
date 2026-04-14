@@ -1,5 +1,23 @@
-import { Controller, Post, Get, Param, Body, Query, HttpCode, HttpStatus, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -29,13 +47,19 @@ export class OrderController {
   async findAll(
     @Request() req,
     @Query('branch_id') branch_id?: string,
-    @Query('page') page?: number, 
-    @Query('limit') limit?: number, 
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
     @Query('status') status?: string,
-    @Query('search') search?: string
+    @Query('search') search?: string,
   ) {
     const bId = req.user.role === 'ADMIN' ? branch_id : req.user.branch_id;
-    return this.orderService.findAll({ branch_id: bId, page, limit, status, search });
+    return this.orderService.findAll({
+      branch_id: bId,
+      page,
+      limit,
+      status,
+      search,
+    });
   }
 
   @Get('dashboard')
@@ -62,9 +86,13 @@ export class OrderController {
   @ApiOperation({ summary: 'Add items to an existing order' })
   async addItems(
     @Param('id') id: string,
-    @Body() body: { items: any[], payment_method?: string }
+    @Body() body: { items: any[]; payment_method?: string },
   ) {
-    return this.orderService.addItemsToOrder(id, body.items, body.payment_method);
+    return this.orderService.addItemsToOrder(
+      id,
+      body.items,
+      body.payment_method,
+    );
   }
 
   @Post(':id/reprint')

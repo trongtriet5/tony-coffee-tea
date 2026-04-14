@@ -206,8 +206,8 @@ export default function TablesManagementPage() {
     } finally { setLoading(false); }
   };
 
-  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
+  const labelStyle = { fontSize: 14, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -216,14 +216,14 @@ export default function TablesManagementPage() {
         {/* HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý bàn</h1>
+            <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 8 }}>Quản lý bàn</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Chi nhánh:</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 700 }}>Chi nhánh:</p>
               <select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
                 disabled={currentUser?.role !== 'ADMIN'}
-                style={{ background: "white", border: "1px solid var(--border)", padding: "4px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, outline: "none", cursor: currentUser?.role !== 'ADMIN' ? "not-allowed" : "pointer", opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
+                style={{ background: "white", border: "1px solid var(--border)", padding: "4px 12px", borderRadius: 8, fontSize: 15, fontWeight: 700, outline: "none", cursor: currentUser?.role !== 'ADMIN' ? "not-allowed" : "pointer", opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
@@ -247,19 +247,19 @@ export default function TablesManagementPage() {
             occupancyStats && (
               <>
                 <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
-                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8 }}>TỔNG BÀN</p>
+                  <p style={{ fontSize: 13, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8 }}>TỔNG BÀN</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: "var(--text-primary)" }}>{occupancyStats.total_tables}</p>
                 </div>
                 <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
-                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--danger)", marginBottom: 8 }}>BÀN ĐANG SỬ DỤNG</p>
+                  <p style={{ fontSize: 13, fontWeight: 900, color: "var(--danger)", marginBottom: 8 }}>BÀN ĐANG SỬ DỤNG</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: "var(--danger)" }}>{occupancyStats.occupied_tables}</p>
                 </div>
                 <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
-                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--success)", marginBottom: 8 }}>BÀN TRỐNG</p>
+                  <p style={{ fontSize: 13, fontWeight: 900, color: "var(--success)", marginBottom: 8 }}>BÀN TRỐNG</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: "var(--success)" }}>{occupancyStats.available_tables}</p>
                 </div>
                 <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid var(--border)", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }} className="animate-fade-in">
-                  <p style={{ fontSize: 12, fontWeight: 900, color: "var(--accent)", marginBottom: 8 }}>TỶ LỆ LẤP ĐẦY</p>
+                  <p style={{ fontSize: 13, fontWeight: 900, color: "var(--accent)", marginBottom: 8 }}>TỶ LỆ LẤP ĐẦY</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)" }}>{occupancyStats.occupancy_rate}</p>
                 </div>
               </>

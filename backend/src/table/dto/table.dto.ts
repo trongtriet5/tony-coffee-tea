@@ -18,7 +18,10 @@ export class CreateTableDto {
 }
 
 export class TransferTableDto {
-  @ApiProperty({ example: 'table_02', description: 'ID bàn đích cần chuyển tới' })
+  @ApiProperty({
+    example: 'table_02',
+    description: 'ID bàn đích cần chuyển tới',
+  })
   @IsString()
   to_table_id: string;
 }
@@ -29,7 +32,11 @@ export class UpdateTableDto {
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ enum: ['AVAILABLE', 'OCCUPIED'], example: 'AVAILABLE', description: 'Trạng thái bàn' })
+  @ApiPropertyOptional({
+    enum: ['AVAILABLE', 'OCCUPIED'],
+    example: 'AVAILABLE',
+    description: 'Trạng thái bàn',
+  })
   @IsOptional()
   @IsString()
   status?: 'AVAILABLE' | 'OCCUPIED';

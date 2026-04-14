@@ -23,17 +23,16 @@ export class MaterialService {
         branch_id: dto.branch_id,
         unit: dto.unit,
         cost_per_unit: dto.cost_per_unit,
-        stock_current: dto.initial_stock || 0,
+        stock_current: dto.stock_current || 0,
       },
     });
 
-    // Nếu có initial stock, ghi lại transaction
-    if (dto.initial_stock && dto.initial_stock > 0) {
+    if (dto.stock_current && dto.stock_current > 0) {
       await this.prisma.materialTransaction.create({
         data: {
           material_id: material.id,
           type: 'IN',
-          quantity: dto.initial_stock,
+          quantity: dto.stock_current,
           note: 'Nhập kho nguyên vật liệu',
         },
       });
@@ -151,7 +150,11 @@ export class MaterialService {
 
     await this.cleanupTransactions(materialId, prisma);
 
-    await this.handleAutoOffItems(materialId, updatedMaterial.stock_current, prisma);
+    await this.handleAutoOffItems(
+      materialId,
+      updatedMaterial.stock_current,
+      prisma,
+    );
   }
 
   private async handleAutoOffItems(
@@ -163,37 +166,42 @@ export class MaterialService {
       // Find variants that use this material
       const productRecipes = await prismaTx.productRecipe.findMany({
         where: { material_id: materialId },
-        include: { variant: true }
+        include: { variant: true },
       });
-      const productIds = Array.from(new Set(productRecipes.map((r: any) => r.variant.product_id)));
+      const productIds = Array.from(
+        new Set(productRecipes.map((r: any) => r.variant.product_id)),
+      );
       if (productIds.length > 0) {
         await prismaTx.product.updateMany({
           where: { id: { in: productIds as string[] } },
-          data: { available: false }
+          data: { available: false },
         });
       }
 
       // Find toppings that use this material
       const toppingRecipes = await prismaTx.toppingRecipe.findMany({
-        where: { material_id: materialId }
+        where: { material_id: materialId },
       });
       const toppingIds = toppingRecipes.map((r: any) => r.topping_id);
       if (toppingIds.length > 0) {
         await prismaTx.topping.updateMany({
           where: { id: { in: toppingIds as string[] } },
-          data: { available: false }
+          data: { available: false },
         });
       }
     }
   }
 
-  private async cleanupTransactions(materialId: string, prismaTx: any): Promise<void> {
+  private async cleanupTransactions(
+    materialId: string,
+    prismaTx: any,
+  ): Promise<void> {
     const allTx = await prismaTx.materialTransaction.findMany({
       where: { material_id: materialId },
       orderBy: { created_at: 'desc' },
       select: { id: true },
     });
-    
+
     if (allTx.length > 100) {
       const idsToDelete = allTx.slice(100).map((t: any) => t.id);
       await prismaTx.materialTransaction.deleteMany({
@@ -212,7 +220,12 @@ export class MaterialService {
     if (!currentMaterial)
       throw new NotFoundException(`Material ${id} not found`);
 
-    const data: any = { ...dto };
+    const data: any = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.unit !== undefined) data.unit = dto.unit;
+    if (dto.cost_per_unit !== undefined) data.cost_per_unit = dto.cost_per_unit;
+    if (dto.stock_current !== undefined) data.stock_current = dto.stock_current;
+    
     const stockChanged =
       dto.stock_current !== undefined &&
       dto.stock_current !== currentMaterial.stock_current;
@@ -352,7 +365,10 @@ export class MaterialService {
     });
   }
 
-  async getAllTransactions(branchId?: string, limit: number = 100): Promise<any[]> {
+  async getAllTransactions(
+    branchId?: string,
+    limit: number = 100,
+  ): Promise<any[]> {
     return this.prisma.materialTransaction.findMany({
       where: branchId ? { material: { branch_id: branchId } } : {},
       include: {
@@ -438,7 +454,13 @@ export class MaterialService {
 
     // Sheet 1: Import Data
     const wsData = [
-      ['Tên nguyên liệu', 'Đơn vị', 'Giá vốn/Đơn vị', 'Tồn kho khởi tạo', 'Tên Chi nhánh'],
+      [
+        'Tên nguyên liệu',
+        'Đơn vị',
+        'Giá vốn/Đơn vị',
+        'Tồn kho khởi tạo',
+        'Tên Chi nhánh',
+      ],
       ['Cà phê hạt', 'kg', 250000, 10, 'Tony Coffee & Tea chi nhánh 1'],
       ['Sữa đặc', 'lon', 18000, 24, 'Tony Coffee & Tea chi nhánh 1'],
       ['Trà ô long', 'g', 500, 1000, 'Tony Coffee & Tea chi nhánh 2'],
@@ -449,11 +471,26 @@ export class MaterialService {
     // Sheet 2: Definition
     const wsDefData = [
       ['Tên cột', 'Mô tả', 'Loại dữ liệu', 'Bắt buộc'],
-      ['Tên nguyên liệu', 'Tên của nguyên vật liệu (ví dụ: Cafe, Đường)', 'Chuỗi văn bản', 'Có'],
+      [
+        'Tên nguyên liệu',
+        'Tên của nguyên vật liệu (ví dụ: Cafe, Đường)',
+        'Chuỗi văn bản',
+        'Có',
+      ],
       ['Đơn vị', 'Đơn vị tính (kg, g, lon, hộp...)', 'Chuỗi văn bản', 'Có'],
       ['Giá vốn/Đơn vị', 'Giá nhập của 1 đơn vị tính', 'Số', 'Có'],
-      ['Tồn kho khởi tạo', 'Số lượng tồn kho ban đầu hoặc số lượng mới cần cập nhật', 'Số', 'Có'],
-      ['Tên Chi nhánh', 'Bỏ trống nếu muốn dùng chi nhánh đang chọn trên web. Nếu điền thì phải trùng khớp với tên trong sheet Danh sách Chi nhánh', 'Chuỗi', 'Không'],
+      [
+        'Tồn kho khởi tạo',
+        'Số lượng tồn kho ban đầu hoặc số lượng mới cần cập nhật',
+        'Số',
+        'Có',
+      ],
+      [
+        'Tên Chi nhánh',
+        'Bỏ trống nếu muốn dùng chi nhánh đang chọn trên web. Nếu điền thì phải trùng khớp với tên trong sheet Danh sách Chi nhánh',
+        'Chuỗi',
+        'Không',
+      ],
     ];
     const wsDef = XLSX.utils.aoa_to_sheet(wsDefData);
     XLSX.utils.book_append_sheet(wb, wsDef, 'Hướng dẫn');
@@ -461,13 +498,28 @@ export class MaterialService {
     // Sheet 3: Existing Materials (Reference)
     const existingMaterials = await this.prisma.material.findMany({
       where: { branch_id: branchId },
-      select: { name: true, unit: true, cost_per_unit: true, stock_current: true },
-      orderBy: { name: 'asc' }
+      select: {
+        name: true,
+        unit: true,
+        cost_per_unit: true,
+        stock_current: true,
+      },
+      orderBy: { name: 'asc' },
     });
 
     const wsExistingData = [
-      ['Tên hiện có (Copy cột này vào sheet Import)', 'Đơn vị', 'Giá vốn hiện tại', 'Tồn kho hiện tại'],
-      ...existingMaterials.map(m => [m.name, m.unit, m.cost_per_unit, m.stock_current])
+      [
+        'Tên hiện có (Copy cột này vào sheet Import)',
+        'Đơn vị',
+        'Giá vốn hiện tại',
+        'Tồn kho hiện tại',
+      ],
+      ...existingMaterials.map((m) => [
+        m.name,
+        m.unit,
+        m.cost_per_unit,
+        m.stock_current,
+      ]),
     ];
     const wsExisting = XLSX.utils.aoa_to_sheet(wsExistingData);
     XLSX.utils.book_append_sheet(wb, wsExisting, 'Danh sách hiện có');
@@ -475,21 +527,25 @@ export class MaterialService {
     // Sheet 4: Products & Sizes (Reference for Recipes)
     const products = await this.prisma.product.findMany({
       include: { variants: true },
-      orderBy: { category: 'asc' }
+      orderBy: { category: 'asc' },
     });
 
     const wsProductData = [
       ['Tên món (Tiếng Việt)', 'Size / Phân loại', 'Giá bán'],
-      ...products.flatMap(p => p.variants.map(v => [p.name_vi, v.size, v.price]))
+      ...products.flatMap((p) =>
+        p.variants.map((v) => [p.name_vi, v.size, v.price]),
+      ),
     ];
     const wsProduct = XLSX.utils.aoa_to_sheet(wsProductData);
     XLSX.utils.book_append_sheet(wb, wsProduct, 'Sản phẩm & Size');
 
     // Sheet 5: Branches (Reference)
-    const branches = await this.prisma.branch.findMany({ orderBy: { name: 'asc' } });
+    const branches = await this.prisma.branch.findMany({
+      orderBy: { name: 'asc' },
+    });
     const wsBranchData = [
       ['Tên Chi nhánh', 'Địa chỉ'],
-      ...branches.map(b => [b.name, b.address || ''])
+      ...branches.map((b) => [b.name, b.address || '']),
     ];
     const wsBranch = XLSX.utils.aoa_to_sheet(wsBranchData);
     XLSX.utils.book_append_sheet(wb, wsBranch, 'Danh sách Chi nhánh');
@@ -500,7 +556,8 @@ export class MaterialService {
 
   async importMaterials(buffer: Buffer, branchId?: string): Promise<any> {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheet = workbook.Sheets['Import'] || workbook.Sheets[workbook.SheetNames[0]];
+    const sheet =
+      workbook.Sheets['Import'] || workbook.Sheets[workbook.SheetNames[0]];
     const rawData: any[] = XLSX.utils.sheet_to_json(sheet);
 
     const results = {
@@ -511,13 +568,15 @@ export class MaterialService {
 
     // Cache branches for lookup
     const branches = await this.prisma.branch.findMany();
-    const branchMap = new Map(branches.map(b => [b.name.toLowerCase().trim(), b.id]));
+    const branchMap = new Map(
+      branches.map((b) => [b.name.toLowerCase().trim(), b.id]),
+    );
 
     for (const row of rawData) {
       const name = row['Tên nguyên liệu']?.toString().trim();
       const unit = row['Đơn vị']?.toString().trim();
       const cost = parseFloat(row['Giá vốn/Đơn vị']);
-      const initialStock = parseFloat(row['Tồn kho khởi tạo'] || 0);
+      const initialStock = parseFloat(row['Tồn kho hiện tại'] || 0);
       const branchName = row['Tên Chi nhánh']?.toString().trim();
 
       let targetBranchId = branchId; // Default to the ID from the UI
@@ -527,28 +586,34 @@ export class MaterialService {
         if (foundId) {
           targetBranchId = foundId;
         } else {
-          results.errors.push(`Dòng "${name}": Chi nhánh "${branchName}" không hợp lệ`);
+          results.errors.push(
+            `Dòng "${name}": Chi nhánh "${branchName}" không hợp lệ`,
+          );
           continue;
         }
       }
 
       if (!targetBranchId) {
-        results.errors.push(`Dòng "${name}": Vui lòng chọn chi nhánh trên web hoặc điền vào file`);
+        results.errors.push(
+          `Dòng "${name}": Vui lòng chọn chi nhánh trên web hoặc điền vào file`,
+        );
         continue;
       }
 
       if (!name || !unit || isNaN(cost)) {
-        results.errors.push(`Dòng "${name || 'Không tên'}": Thiếu thông tin bắt buộc hoặc giá không hợp lệ`);
+        results.errors.push(
+          `Dòng "${name || 'Không tên'}": Thiếu thông tin bắt buộc hoặc giá không hợp lệ`,
+        );
         continue;
       }
 
       try {
         // Check if material already exists in this branch
         const existing = await this.prisma.material.findFirst({
-          where: { 
+          where: {
             name: { equals: name },
-            branch_id: targetBranchId 
-          }
+            branch_id: targetBranchId,
+          },
         });
 
         if (existing) {
@@ -559,8 +624,8 @@ export class MaterialService {
             data: {
               unit,
               cost_per_unit: cost,
-              stock_current: initialStock
-            }
+              stock_current: initialStock,
+            },
           });
 
           if (diff !== 0) {
@@ -570,7 +635,7 @@ export class MaterialService {
                 type: 'ADJUST',
                 quantity: diff,
                 note: 'Excel Import Update',
-              }
+              },
             });
           }
         } else {
@@ -579,8 +644,8 @@ export class MaterialService {
             name,
             unit,
             cost_per_unit: cost,
-            initial_stock: initialStock,
-            branch_id: targetBranchId!,
+            stock_current: initialStock,
+            branch_id: targetBranchId,
           });
         }
         results.success++;
@@ -599,7 +664,7 @@ export class MaterialService {
     });
 
     const data = materials.map((m) => ({
-      'ID': m.id,
+      ID: m.id,
       'Tên nguyên liệu': m.name,
       'Đơn vị': m.unit,
       'Giá vốn': m.cost_per_unit,

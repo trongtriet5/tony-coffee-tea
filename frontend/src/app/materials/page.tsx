@@ -24,7 +24,7 @@ export default function MaterialsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
-  const [materialForm, setMaterialForm] = useState({ name: "", unit: "", cost_per_unit: "", initial_stock: "" });
+  const [materialForm, setMaterialForm] = useState({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
 
   const [transactionForm, setTransactionForm] = useState({ type: "IN" as const, quantity: "", note: "" });
 
@@ -97,7 +97,7 @@ export default function MaterialsPage() {
         branch_id: selectedBranchId,
         unit: materialForm.unit,
         cost_per_unit: parseFloat(materialForm.cost_per_unit),
-        initial_stock: materialForm.initial_stock ? parseFloat(materialForm.initial_stock) : 0,
+        stock_current: materialForm.stock_current ? parseFloat(materialForm.stock_current) : 0,
       };
 
       if (editingMaterialId) {
@@ -108,7 +108,7 @@ export default function MaterialsPage() {
         toastSuccess("Đã thêm nguyên liệu mới thành công!");
       }
 
-      setMaterialForm({ name: "", unit: "", cost_per_unit: "", initial_stock: "" });
+      setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
       setEditingMaterialId(null);
       fetchData();
     } catch (error) {
@@ -157,7 +157,7 @@ export default function MaterialsPage() {
 
   const startEditMaterial = (m: Material) => {
     setEditingMaterialId(m.id);
-    setMaterialForm({ name: m.name, unit: m.unit, cost_per_unit: m.cost_per_unit.toString(), initial_stock: "" });
+    setMaterialForm({ name: m.name, unit: m.unit, cost_per_unit: m.cost_per_unit.toString(), stock_current: "" });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -199,11 +199,11 @@ export default function MaterialsPage() {
 
   const cancelEdit = () => {
     setEditingMaterialId(null);
-    setMaterialForm({ name: "", unit: "", cost_per_unit: "", initial_stock: "" });
+    setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
   };
 
-  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
+  const labelStyle = { fontSize: 14, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -212,8 +212,8 @@ export default function MaterialsPage() {
         {/* HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý nguyên vật liệu</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700 }}>Quản lý nguyên vật liệu pha chế & topping</p>
+            <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 8 }}>Quản lý nguyên vật liệu</h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 700 }}>Quản lý nguyên vật liệu pha chế & topping</p>
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {currentUser?.role?.toUpperCase() === 'ADMIN' && (
@@ -231,16 +231,16 @@ export default function MaterialsPage() {
             )}
             {currentUser?.role?.toUpperCase() === 'ADMIN' && (
               <>
-                <a href={getMaterialTemplateUrl()} target="_blank" style={{ textDecoration: "none", background: "white", color: "var(--accent)", padding: "12px 20px", borderRadius: 14, fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+                <a href={getMaterialTemplateUrl()} target="_blank" style={{ textDecoration: "none", background: "white", color: "var(--accent)", padding: "12px 20px", borderRadius: 14, fontSize: 15, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
                   <HiDocumentText size={18} /> TEMPLATE
                 </a>
-                <button onClick={() => fileInputRef.current?.click()} style={{ background: "white", color: "var(--text-primary)", padding: "12px 20px", borderRadius: 14, fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", cursor: "pointer", boxShadow: "var(--shadow-sm)" }}>
+                <button onClick={() => fileInputRef.current?.click()} style={{ background: "white", color: "var(--text-primary)", padding: "12px 20px", borderRadius: 14, fontSize: 15, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", cursor: "pointer", boxShadow: "var(--shadow-sm)" }}>
                   <HiUpload size={18} /> IMPORT
                   <input type="file" ref={fileInputRef} onChange={handleImport} style={{ display: "none" }} accept=".xlsx,.xls" />
                 </button>
               </>
             )}
-            <a href={exportMaterialsExcel(selectedBranchId)} target="_blank" style={{ textDecoration: "none", background: "var(--accent)", color: "white", padding: "12px 20px", borderRadius: 14, fontSize: 13, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "none", boxShadow: "var(--shadow-sm)" }}>
+            <a href={exportMaterialsExcel(selectedBranchId)} target="_blank" style={{ textDecoration: "none", background: "var(--accent)", color: "white", padding: "12px 20px", borderRadius: 14, fontSize: 15, fontWeight: 900, display: "flex", alignItems: "center", gap: 8, border: "none", boxShadow: "var(--shadow-sm)" }}>
               <HiDownload size={18} /> EXPORT
             </a>
           </div>
@@ -253,11 +253,11 @@ export default function MaterialsPage() {
 
           {currentUser?.role?.toUpperCase() === 'ADMIN' && (
             <div>
-              <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-                <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)", height: "550px", overflowY: "auto" }}>
+                <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   {editingMaterialId ? "SỬA NGUYÊN LIỆU" : "THÊM NGUYÊN LIỆU MỚI"}
                   {editingMaterialId && (
-                    <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 11, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
+                    <button onClick={cancelEdit} style={{ background: "var(--bg-primary)", color: "var(--text-muted)", fontSize: 13, border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 800, cursor: "pointer" }}>HỦY</button>
                   )}
                 </h3>
 
@@ -288,14 +288,16 @@ export default function MaterialsPage() {
                       <label style={labelStyle}>GIÁ/ĐƠN VỊ (VNĐ)</label>
                       <input required type="number" step="0.01" placeholder="VD: 150000" style={inputStyle} value={materialForm.cost_per_unit} onChange={e => setMaterialForm({ ...materialForm, cost_per_unit: e.target.value })} />
                     </div>
-                    <div>
-                      <label style={labelStyle}>TỒN KHO KHỞI TẠO (tuỳ chọn)</label>
-                      <input type="number" step="0.01" placeholder="VD: 10" style={inputStyle} value={materialForm.initial_stock} onChange={e => setMaterialForm({ ...materialForm, initial_stock: e.target.value })} />
-                    </div>
+                    {!editingMaterialId && (
+                      <div>
+                        <label style={labelStyle}>TỒN KHO HIỆN TẠI (tuỳ chọn)</label>
+                        <input type="number" step="0.01" placeholder="VD: 10" style={inputStyle} value={materialForm.stock_current} onChange={e => setMaterialForm({ ...materialForm, stock_current: e.target.value })} />
+                      </div>
+                    )}
                   </div>
 
-                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
-                    {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : editingMaterialId ? <><HiPencilAlt size={18} /> LƯU THAY ĐỔI</> : <><HiPlus size={18} /> THÊM NGUYÊN LIỆU</>}
+                  <button disabled={loading} type="submit" style={{ width: "100%", padding: 18, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
+                    {loading ? <AiOutlineLoading3Quarters size={20} className="spin" /> : editingMaterialId ? <><HiPencilAlt size={20} /> LƯU THAY ĐỔI</> : <><HiPlus size={20} /> THÊM NGUYÊN LIỆU</>}
                   </button>
                 </form>
               </div>
@@ -307,10 +309,10 @@ export default function MaterialsPage() {
 
           {/* RIGHT: LIST SECTION */}
           <div>
-            <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: "24px 8px 32px 32px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", maxHeight: "450px", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: "32px 8px 32px 32px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", height: "550px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <div style={{ marginBottom: 24, paddingRight: 24 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 900 }}>Danh sách nguyên liệu</h3>
-                <p style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>Nhấn vào dòng để xem giao dịch hoặc chỉnh sửa.</p>
+                <h3 style={{ fontSize: 24, fontWeight: 900 }}>Danh sách nguyên liệu</h3>
+                <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700 }}>Nhấn vào dòng để chỉnh sửa nguyên liệu.</p>
               </div>
 
               {fetchLoading ? (
@@ -325,7 +327,7 @@ export default function MaterialsPage() {
                     {materials.map((m, idx) => (
                       <div
                         key={m.id}
-                        onClick={() => loadTransactions(m.id)}
+                        onClick={() => startEditMaterial(m)}
                         style={{
                           padding: "16px 20px",
                           borderRadius: 16,
@@ -342,10 +344,10 @@ export default function MaterialsPage() {
                       >
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontSize: 14, fontWeight: 900 }}>{m.name}</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)" }}>({m.unit})</span>
+                            <span style={{ fontSize: 16, fontWeight: 900 }}>{m.name}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)" }}>({m.unit})</span>
                           </div>
-                          <div style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 700, display: "flex", gap: 16 }}>
+                          <div style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 700, display: "flex", gap: 16 }}>
                             <span style={{ color: m.stock_current <= 0 ? "var(--danger)" : "inherit", fontWeight: m.stock_current <= 0 ? 900 : 700 }}>Tồn: {Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")} {m.unit}</span>
                             {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                               <>
@@ -374,9 +376,9 @@ export default function MaterialsPage() {
 
         {/* STOCK TABLE BELOW */}
         <div style={{ marginTop: 32, background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24 }}>Bảng thống kê tồn kho chi tiết</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 900, marginBottom: 24 }}>Bảng thống kê tồn kho chi tiết</h3>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ textAlign: "left", color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
                   <th style={{ padding: "12px 16px", fontWeight: 900 }}>TÊN NGUYÊN LIỆU</th>
@@ -423,8 +425,8 @@ export default function MaterialsPage() {
         <div style={{ marginTop: 32, background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
             <div>
-              <h3 style={{ fontSize: 18, fontWeight: 900 }}>Lịch sử biến động kho toàn hệ thống</h3>
-              <p style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>Theo dõi nhập, xuất và hao hụt từ đơn hàng của tất cả nguyên liệu.</p>
+              <h3 style={{ fontSize: 20, fontWeight: 900 }}>Lịch sử biến động kho toàn hệ thống</h3>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 700 }}>Theo dõi nhập, xuất và hao hụt từ đơn hàng của tất cả nguyên liệu.</p>
             </div>
           </div>
 
@@ -456,7 +458,7 @@ export default function MaterialsPage() {
                     <label style={labelStyle}>GHI CHÚ (tuỳ chọn)</label>
                     <input placeholder="VD: Nhập thêm hàng" style={inputStyle} value={transactionForm.note} onChange={e => setTransactionForm({ ...transactionForm, note: e.target.value })} />
                   </div>
-                  <button disabled={loading || !selectedMaterialId} type="submit" style={{ width: "100%", padding: 12, background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s", opacity: !selectedMaterialId ? 0.5 : 1 }}>
+                  <button disabled={loading || !selectedMaterialId} type="submit" style={{ width: "100%", padding: 12, background: "var(--accent)", color: "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s", opacity: !selectedMaterialId ? 0.5 : 1 }}>
                     {loading ? <AiOutlineLoading3Quarters size={16} className="spin" /> : <HiPlus size={16} />} GHI NHẬN
                   </button>
                 </form>
@@ -465,7 +467,7 @@ export default function MaterialsPage() {
 
             <div style={{ flex: 1 }}>
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15 }}>
                   <thead>
                     <tr style={{ textAlign: "left", color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
                       <th style={{ padding: "12px 16px", fontWeight: 900 }}>THỜI GIAN</th>
@@ -489,14 +491,14 @@ export default function MaterialsPage() {
                         <tr key={tx.id} style={{ borderBottom: "1px solid var(--bg-primary)", background: selectedMaterialId === tx.material_id ? "#f0f7ff" : "transparent" }} className="animate-fade-in">
                           <td style={{ padding: "16px", whiteSpace: "nowrap" }}>
                             <div style={{ fontWeight: 700 }}>{format(new Date(tx.created_at), "dd/MM/yyyy")}</div>
-                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(tx.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{new Date(tx.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</div>
                           </td>
                           <td style={{ padding: "16px" }}>
                             <div style={{ fontWeight: 900, color: "var(--text-primary)" }}>{(tx as any).material?.name}</div>
-                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{(tx as any).material?.unit}</div>
+                            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{(tx as any).material?.unit}</div>
                           </td>
                           <td style={{ padding: "16px" }}>
-                            <span style={{ display: "inline-block", fontSize: 10, fontWeight: 900, padding: "4px 8px", borderRadius: 6, background: tx.type === 'IN' ? "#10b98120" : tx.type === 'OUT' ? "#ef444420" : tx.type === 'ADJUST' ? "#f5a62d20" : "#3b82f620", color: tx.type === 'IN' ? "#10b981" : tx.type === 'OUT' ? "#ef4444" : tx.type === 'ADJUST' ? "#f5a62d" : "#3b82f6" }}>
+                            <span style={{ display: "inline-block", fontSize: 11, fontWeight: 900, padding: "4px 8px", borderRadius: 6, background: tx.type === 'IN' ? "#10b98120" : tx.type === 'OUT' ? "#ef444420" : tx.type === 'ADJUST' ? "#f5a62d20" : "#3b82f620", color: tx.type === 'IN' ? "#10b981" : tx.type === 'OUT' ? "#ef4444" : tx.type === 'ADJUST' ? "#f5a62d" : "#3b82f6" }}>
                               {tx.type}
                             </span>
                           </td>
@@ -505,7 +507,7 @@ export default function MaterialsPage() {
                               {tx.type === 'IN' || (tx.type === 'ADJUST' && tx.quantity > 0) ? '+' : '-'}{Number(Math.abs(tx.quantity)).toFixed(3).replace(/\.?0+$/, "")}
                             </span>
                           </td>
-                          <td style={{ padding: "16px", fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>
+                          <td style={{ padding: "16px", fontSize: 14, color: "var(--text-secondary)", fontWeight: 700 }}>
                             {tx.note || "Hao hụt tự động"}
                           </td>
                         </tr>

@@ -19,7 +19,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { MaterialService } from './material.service';
-import { CreateMaterialDto, UpdateMaterialDto, MaterialTransactionDto } from './dto/material.dto';
+import {
+  CreateMaterialDto,
+  UpdateMaterialDto,
+  MaterialTransactionDto,
+} from './dto/material.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
@@ -42,7 +46,10 @@ export class MaterialController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllMaterials(@Request() req, @Query('branch_id') branch_id?: string) {
+  async getAllMaterials(
+    @Request() req,
+    @Query('branch_id') branch_id?: string,
+  ) {
     const bId = req.user.role === 'ADMIN' ? branch_id : req.user.branch_id;
     return this.materialService.getAllMaterials(bId);
   }
@@ -57,7 +64,10 @@ export class MaterialController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Put(':id')
-  async updateMaterial(@Param('id') id: string, @Body() dto: UpdateMaterialDto) {
+  async updateMaterial(
+    @Param('id') id: string,
+    @Body() dto: UpdateMaterialDto,
+  ) {
     return this.materialService.updateMaterial(id, dto);
   }
 
@@ -116,11 +126,16 @@ export class MaterialController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('export/excel')
-  async exportExcel(@Res() res: Response, @Request() req, @Query('branch_id') branchId?: string) {
+  async exportExcel(
+    @Res() res: Response,
+    @Request() req,
+    @Query('branch_id') branchId?: string,
+  ) {
     const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
     const buffer = await this.materialService.exportMaterials(bId);
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="inventory.xlsx"',
     });
     res.send(buffer);
@@ -131,7 +146,8 @@ export class MaterialController {
     const bId = req.user?.branch_id;
     const buffer = await this.materialService.generateTemplate(bId);
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="material_template.xlsx"',
     });
     res.send(buffer);
@@ -142,11 +158,12 @@ export class MaterialController {
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
   async importMaterials(
-    @UploadedFile() file: any, 
+    @UploadedFile() file: any,
     @Request() req,
-    @Query('branch_id') branch_id?: string
+    @Query('branch_id') branch_id?: string,
   ) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can import');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can import');
     const bId = branch_id || req.user.branch_id;
     return this.materialService.importMaterials(file.buffer, bId);
   }

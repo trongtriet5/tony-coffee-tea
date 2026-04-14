@@ -12,12 +12,12 @@ export class ProductService {
   async findAll(includeUnavailable?: boolean) {
     const products = await this.prisma.product.findMany({
       where: includeUnavailable ? undefined : { available: true },
-      include: { 
+      include: {
         variants: {
           include: {
-            recipes: { take: 1 } // Just check if any recipe exists
-          }
-        } 
+            recipes: { take: 1 }, // Just check if any recipe exists
+          },
+        },
       },
       orderBy: [{ category: 'asc' }, { name_vi: 'asc' }],
     });
@@ -46,7 +46,7 @@ export class ProductService {
     return toppings.map((t) => ({
       ...t,
       cost: 0,
-      has_recipe: t.recipes.length > 0
+      has_recipe: t.recipes.length > 0,
     }));
   }
 
@@ -126,15 +126,23 @@ export class ProductService {
 
   async deleteProduct(id: string) {
     // Check if product is in any order history
-    const orderItemCount = await this.prisma.orderItem.count({ where: { product_id: id } });
+    const orderItemCount = await this.prisma.orderItem.count({
+      where: { product_id: id },
+    });
     if (orderItemCount > 0) {
-      throw new BadRequestException('Sản phẩm đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn món.');
+      throw new BadRequestException(
+        'Sản phẩm đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn món.',
+      );
     }
 
     // Delete variants first (and their recipes)
-    const variants = await this.prisma.productVariant.findMany({ where: { product_id: id } });
+    const variants = await this.prisma.productVariant.findMany({
+      where: { product_id: id },
+    });
     for (const v of variants) {
-      await this.prisma.productRecipe.deleteMany({ where: { variant_id: v.id } });
+      await this.prisma.productRecipe.deleteMany({
+        where: { variant_id: v.id },
+      });
     }
     await this.prisma.productVariant.deleteMany({ where: { product_id: id } });
     return this.prisma.product.delete({ where: { id } });
@@ -142,9 +150,13 @@ export class ProductService {
 
   async deleteTopping(id: string) {
     // Check if topping is in any order history
-    const orderItemToppingCount = await this.prisma.orderItemTopping.count({ where: { topping_id: id } });
+    const orderItemToppingCount = await this.prisma.orderItemTopping.count({
+      where: { topping_id: id },
+    });
     if (orderItemToppingCount > 0) {
-      throw new BadRequestException('Topping đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn.');
+      throw new BadRequestException(
+        'Topping đã có trong lịch sử đơn hàng, không thể xóa hoàn toàn. Vui lòng tắt "Khả dụng" để ẩn.',
+      );
     }
 
     await this.prisma.toppingRecipe.deleteMany({ where: { topping_id: id } });

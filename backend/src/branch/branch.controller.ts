@@ -26,7 +26,8 @@ export class BranchController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateBranchDto, @Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can create branch');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can create branch');
     return this.branchService.create(dto);
   }
 
@@ -41,15 +42,21 @@ export class BranchController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateBranchDto, @Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can update branch');
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateBranchDto,
+    @Request() req,
+  ) {
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can update branch');
     return this.branchService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string, @Request() req) {
-    if (req.user.role !== 'ADMIN') throw new ForbiddenException('Only admin can delete branch');
+    if (req.user.role !== 'ADMIN')
+      throw new ForbiddenException('Only admin can delete branch');
     return this.branchService.remove(id);
   }
 }

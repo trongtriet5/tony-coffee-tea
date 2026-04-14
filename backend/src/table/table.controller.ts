@@ -13,7 +13,11 @@ import {
   Request,
 } from '@nestjs/common';
 import { TableService } from './table.service';
-import { CreateTableDto, UpdateTableDto, TransferTableDto } from './dto/table.dto';
+import {
+  CreateTableDto,
+  UpdateTableDto,
+  TransferTableDto,
+} from './dto/table.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
@@ -40,13 +44,19 @@ export class TableController {
   }
 
   @Get('available')
-  async getAvailableTables(@Request() req, @Query('branch_id') branchId?: string) {
+  async getAvailableTables(
+    @Request() req,
+    @Query('branch_id') branchId?: string,
+  ) {
     const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
     return this.tableService.getAvailableTables(bId);
   }
 
   @Get('occupancy-status')
-  async getOccupancyStatus(@Request() req, @Query('branch_id') branchId?: string) {
+  async getOccupancyStatus(
+    @Request() req,
+    @Query('branch_id') branchId?: string,
+  ) {
     const bId = req.user.role === 'ADMIN' ? branchId : req.user.branch_id;
     return this.tableService.getTableOccupancyStatus(bId);
   }

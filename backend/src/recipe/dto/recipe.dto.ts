@@ -2,7 +2,10 @@ import { IsString, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateProductRecipeDto {
-  @ApiProperty({ example: 'var_size_m', description: 'ID biến thể sản phẩm (size)' })
+  @ApiProperty({
+    example: 'var_size_m',
+    description: 'ID biến thể sản phẩm (size)',
+  })
   @IsString()
   variant_id: string;
 
@@ -10,7 +13,10 @@ export class CreateProductRecipeDto {
   @IsString()
   material_id: string;
 
-  @ApiProperty({ example: 15, description: 'Số lượng nguyên liệu cần dùng mỗi phần' })
+  @ApiProperty({
+    example: 15,
+    description: 'Số lượng nguyên liệu cần dùng mỗi phần',
+  })
   @IsNumber()
   quantity: number;
 }
@@ -24,7 +30,10 @@ export class CreateToppingRecipeDto {
   @IsString()
   material_id: string;
 
-  @ApiProperty({ example: 5, description: 'Số lượng nguyên liệu cần dùng mỗi topping' })
+  @ApiProperty({
+    example: 5,
+    description: 'Số lượng nguyên liệu cần dùng mỗi topping',
+  })
   @IsNumber()
   quantity: number;
 }

@@ -37,6 +37,7 @@ html, body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -87,7 +88,7 @@ html, body {
 .badge {
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -99,7 +100,8 @@ html, body {
 
 /* Skeleton */
 .skeleton {
-  background: linear-gradient(90deg, #F1F3F5 25%, #E9ECEF 50%, #F1F3F5 75%);
+  background: #f0f0f0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

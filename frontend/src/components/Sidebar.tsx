@@ -109,7 +109,7 @@ export default function Sidebar() {
           flexDirection: "column",
           alignItems: "center", 
           justifyContent: "center", 
-          fontSize: 12, 
+          fontSize: 13, 
           fontWeight: 900, 
           color: "var(--accent)", 
           border: "1px solid var(--border)",

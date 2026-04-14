@@ -74,14 +74,14 @@ export default function BranchesPage() {
     } finally { setLoading(false); }
   };
 
-  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 14, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
+  const labelStyle = { fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>Quản lý chi nhánh</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 700, marginBottom: 32 }}>Quản lý danh sách chi nhánh trong hệ thống</p>
+        <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 700, marginBottom: 32 }}>Quản lý danh sách chi nhánh trong hệ thống</p>
 
         <div style={{ opacity: 0, height: 0, overflow: "hidden" }} />
 

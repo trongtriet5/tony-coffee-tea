@@ -1,6 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTableDto, UpdateTableDto, TableResponseDto } from './dto/table.dto';
+import {
+  CreateTableDto,
+  UpdateTableDto,
+  TableResponseDto,
+} from './dto/table.dto';
 
 @Injectable()
 export class TableService {
@@ -9,14 +17,16 @@ export class TableService {
   async createTable(dto: CreateTableDto): Promise<TableResponseDto> {
     // Check if table name already exists in this branch
     const existing = await this.prisma.table.findFirst({
-      where: { 
+      where: {
         name: dto.name,
-        branch_id: dto.branch_id || null
+        branch_id: dto.branch_id || null,
       },
     });
 
     if (existing) {
-      throw new BadRequestException(`Bàn có tên "${dto.name}" đã tồn tại trong chi nhánh này`);
+      throw new BadRequestException(
+        `Bàn có tên "${dto.name}" đã tồn tại trong chi nhánh này`,
+      );
     }
 
     const table = await this.prisma.table.create({
@@ -50,7 +60,12 @@ export class TableService {
 
     return tables
       .map((t) => this.formatTableResponse(t))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+      );
   }
 
   async getAvailableTables(branchId?: string): Promise<TableResponseDto[]> {
@@ -63,7 +78,12 @@ export class TableService {
 
     return tables
       .map((t) => this.formatTableResponse(t))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+      );
   }
 
   async getTableById(id: string): Promise<TableResponseDto> {
@@ -84,7 +104,10 @@ export class TableService {
     return this.formatTableResponse(table);
   }
 
-  async updateTable(id: string, dto: UpdateTableDto): Promise<TableResponseDto> {
+  async updateTable(
+    id: string,
+    dto: UpdateTableDto,
+  ): Promise<TableResponseDto> {
     const table = await this.prisma.table.findUnique({
       where: { id },
     });
@@ -95,9 +118,9 @@ export class TableService {
 
     if (dto.name && dto.name !== table.name) {
       const existing = await this.prisma.table.findFirst({
-        where: { 
-            name: dto.name,
-            branch_id: dto.branch_id || table.branch_id
+        where: {
+          name: dto.name,
+          branch_id: dto.branch_id || table.branch_id,
         },
       });
       if (existing) {
@@ -131,9 +154,9 @@ export class TableService {
   async releaseTable(id: string): Promise<TableResponseDto> {
     const table = await this.prisma.table.findUnique({
       where: { id },
-      include: { 
-        orders: { where: { status: 'PENDING' }, take: 1 } 
-      }
+      include: {
+        orders: { where: { status: 'PENDING' }, take: 1 },
+      },
     });
 
     if (!table) throw new NotFoundException(`Không tìm thấy bàn với ID ${id}`);
@@ -141,7 +164,7 @@ export class TableService {
     if (table.orders.length > 0) {
       await this.prisma.order.update({
         where: { id: table.orders[0].id },
-        data: { status: 'COMPLETED' }
+        data: { status: 'COMPLETED' },
       });
     }
 
@@ -179,7 +202,10 @@ export class TableService {
     return this.formatTableResponse(updated);
   }
 
-  async transferTable(fromTableId: string, toTableId: string): Promise<TableResponseDto> {
+  async transferTable(
+    fromTableId: string,
+    toTableId: string,
+  ): Promise<TableResponseDto> {
     if (fromTableId === toTableId) {
       throw new BadRequestException('Không thể chuyển đơn sang cùng một bàn');
     }
@@ -190,7 +216,10 @@ export class TableService {
         include: { orders: { where: { status: 'PENDING' }, take: 1 } },
       });
 
-      if (!fromTable) throw new NotFoundException(`Không tìm thấy bàn nguồn với ID ${fromTableId}`);
+      if (!fromTable)
+        throw new NotFoundException(
+          `Không tìm thấy bàn nguồn với ID ${fromTableId}`,
+        );
       if (fromTable.status !== 'OCCUPIED') {
         throw new BadRequestException('Bàn nguồn đang trống, không thể chuyển');
       }
@@ -199,7 +228,10 @@ export class TableService {
         where: { id: toTableId },
       });
 
-      if (!toTable) throw new NotFoundException(`Không tìm thấy bàn đích với ID ${toTableId}`);
+      if (!toTable)
+        throw new NotFoundException(
+          `Không tìm thấy bàn đích với ID ${toTableId}`,
+        );
       if (toTable.status !== 'AVAILABLE') {
         throw new BadRequestException('Bàn đích không trống (đang sử dụng)');
       }
@@ -259,10 +291,16 @@ export class TableService {
       total_tables: total,
       occupied_tables: occupied,
       available_tables: available,
-      occupancy_rate: total > 0 ? ((occupied / total) * 100).toFixed(2) + '%' : '0%',
+      occupancy_rate:
+        total > 0 ? ((occupied / total) * 100).toFixed(2) + '%' : '0%',
       tables: tables
         .map((t) => this.formatTableResponse(t))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          }),
+        ),
     };
   }
 
@@ -273,11 +311,13 @@ export class TableService {
       status: table.status as 'AVAILABLE' | 'OCCUPIED',
       branch_id: table.branch_id,
       area: table.area,
-      current_order: table.orders?.[0] ? {
-        id: table.orders[0].id,
-        order_number: table.orders[0].order_number,
-        order_type: table.orders[0].order_type,
-      } : undefined
+      current_order: table.orders?.[0]
+        ? {
+            id: table.orders[0].id,
+            order_number: table.orders[0].order_number,
+            order_type: table.orders[0].order_type,
+          }
+        : undefined,
     };
   }
 }

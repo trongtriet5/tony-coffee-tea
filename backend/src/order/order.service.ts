@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MaterialService } from '../material/material.service';
 import { CreateOrderDto } from './dto/order.dto';
@@ -9,7 +13,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly materialService: MaterialService,
-  ) { }
+  ) {}
 
   async create(dto: CreateOrderDto) {
     const orderType = dto.order_type || 'TAKEAWAY';
@@ -17,20 +21,34 @@ export class OrderService {
 
     let tableId: string | null = null;
     if (orderType === 'DINE_IN') {
-      if (!dto.table_id) throw new BadRequestException('Table ID is required for dine-in orders');
-      const table = await this.prisma.table.findUnique({ where: { id: dto.table_id } });
-      if (!table || table.status !== 'AVAILABLE') throw new BadRequestException(`Table not available`);
+      if (!dto.table_id)
+        throw new BadRequestException(
+          'Table ID is required for dine-in orders',
+        );
+      const table = await this.prisma.table.findUnique({
+        where: { id: dto.table_id },
+      });
+      if (!table || table.status !== 'AVAILABLE')
+        throw new BadRequestException(`Table not available`);
       tableId = dto.table_id;
     }
 
     const productIds = dto.items.map((i) => i.product_id);
-    const variantIds = dto.items.filter(i => i.variant_id).map(i => i.variant_id as string);
+    const variantIds = dto.items
+      .filter((i) => i.variant_id)
+      .map((i) => i.variant_id as string);
     const allToppingIds = dto.items.flatMap((i) => i.topping_ids || []);
 
     const [products, variants, toppings] = await Promise.all([
-      this.prisma.product.findMany({ where: { id: { in: productIds }, available: true } }),
-      this.prisma.productVariant.findMany({ where: { id: { in: variantIds } } }),
-      this.prisma.topping.findMany({ where: { id: { in: allToppingIds }, available: true } }),
+      this.prisma.product.findMany({
+        where: { id: { in: productIds }, available: true },
+      }),
+      this.prisma.productVariant.findMany({
+        where: { id: { in: variantIds } },
+      }),
+      this.prisma.topping.findMany({
+        where: { id: { in: allToppingIds }, available: true },
+      }),
     ]);
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -40,15 +58,23 @@ export class OrderService {
     let totalAmountVal = 0;
     const itemsData = dto.items.map((item) => {
       const prod = productMap.get(item.product_id);
-      if (!prod) throw new BadRequestException(`Sản phẩm ${item.product_id} không tồn tại`);
+      if (!prod)
+        throw new BadRequestException(
+          `Sản phẩm ${item.product_id} không tồn tại`,
+        );
 
       let unitPrice = 0;
       if (item.variant_id) {
         const variant = variantMap.get(item.variant_id);
-        if (!variant) throw new BadRequestException(`Size không hợp lệ cho sản phẩm ${prod.name_vi}`);
+        if (!variant)
+          throw new BadRequestException(
+            `Size không hợp lệ cho sản phẩm ${prod.name_vi}`,
+          );
         unitPrice = variant.price;
       } else {
-        throw new BadRequestException(`Vui lòng chọn size cho sản phẩm ${prod.name_vi}`);
+        throw new BadRequestException(
+          `Vui lòng chọn size cho sản phẩm ${prod.name_vi}`,
+        );
       }
 
       let itemSubtotal = unitPrice * item.quantity;
@@ -66,7 +92,7 @@ export class OrderService {
         quantity: item.quantity,
         unit_price: unitPrice,
         subtotal: itemSubtotal,
-        toppings: { create: selectedToppings }
+        toppings: { create: selectedToppings },
       };
     });
 
@@ -77,7 +103,7 @@ export class OrderService {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
+      timeZone: 'Asia/Ho_Chi_Minh',
     }).format(new Date());
     const ddmm = todayStr.substring(0, 2) + todayStr.substring(3, 5);
 
@@ -96,25 +122,41 @@ export class OrderService {
           table_id: tableId,
           items: { create: itemsData },
         },
-        include: { items: { include: { product: true, variant: true, toppings: true } } }
+        include: {
+          items: { include: { product: true, variant: true, toppings: true } },
+        },
       });
 
       // Track Material usage via BOM
-      const enrichedItems = dto.items.map(item => ({
+      const enrichedItems = dto.items.map((item) => ({
         ...item,
-        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
+        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm',
       }));
-      await this.materialService.deductStockForOrder(order.id, order.order_number, enrichedItems, tx);
+      await this.materialService.deductStockForOrder(
+        order.id,
+        order.order_number,
+        enrichedItems,
+        tx,
+      );
 
       if (tableId) {
-        await tx.table.update({ where: { id: tableId }, data: { status: 'OCCUPIED' } });
+        await tx.table.update({
+          where: { id: tableId },
+          data: { status: 'OCCUPIED' },
+        });
       }
 
       return order;
     });
   }
 
-  async findAll(params: { branch_id?: string; page?: number; limit?: number; status?: string; search?: string }) {
+  async findAll(params: {
+    branch_id?: string;
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }) {
     const { branch_id, page = 1, limit = 20, status, search } = params;
     const skip = (page - 1) * limit;
     const where: any = {};
@@ -126,15 +168,24 @@ export class OrderService {
 
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({
-        where, skip, take: Number(limit), orderBy: { created_at: 'desc' },
+        where,
+        skip,
+        take: Number(limit),
+        orderBy: { created_at: 'desc' },
         include: {
           branch: true,
-          items: { include: { product: true, variant: true, toppings: true } }
-        }
+          items: { include: { product: true, variant: true, toppings: true } },
+        },
       }),
-      this.prisma.order.count({ where })
+      this.prisma.order.count({ where }),
     ]);
-    return { data, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) };
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string) {
@@ -142,8 +193,8 @@ export class OrderService {
       where: { id },
       include: {
         branch: true,
-        items: { include: { product: true, variant: true, toppings: true } }
-      }
+        items: { include: { product: true, variant: true, toppings: true } },
+      },
     });
     if (!order) throw new NotFoundException(`Order ${id} không tồn tại`);
     return order;
@@ -153,12 +204,16 @@ export class OrderService {
     const order = await this.findOne(id);
 
     const productIds = items.map((i) => i.product_id);
-    const variantIds = items.filter(i => i.variant_id).map(i => i.variant_id as string);
+    const variantIds = items
+      .filter((i) => i.variant_id)
+      .map((i) => i.variant_id as string);
     const allToppingIds = items.flatMap((i) => i.topping_ids || []);
 
     const [products, variants, toppings] = await Promise.all([
       this.prisma.product.findMany({ where: { id: { in: productIds } } }),
-      this.prisma.productVariant.findMany({ where: { id: { in: variantIds } } }),
+      this.prisma.productVariant.findMany({
+        where: { id: { in: variantIds } },
+      }),
       this.prisma.topping.findMany({ where: { id: { in: allToppingIds } } }),
     ]);
 
@@ -169,7 +224,10 @@ export class OrderService {
     let extraTotal = 0;
     const itemsData = items.map((item) => {
       const prod = productMap.get(item.product_id);
-      if (!prod) throw new BadRequestException(`Sản phẩm ${item.product_id} không tồn tại`);
+      if (!prod)
+        throw new BadRequestException(
+          `Sản phẩm ${item.product_id} không tồn tại`,
+        );
 
       const variant = variantMap.get(item.variant_id);
       const unitPrice = variant ? variant.price : (prod as any).price || 0;
@@ -190,7 +248,7 @@ export class OrderService {
         quantity: item.quantity,
         unit_price: unitPrice,
         subtotal: itemSubtotal,
-        toppings: { create: selectedToppings }
+        toppings: { create: selectedToppings },
       };
     });
 
@@ -206,25 +264,38 @@ export class OrderService {
         data: {
           total_amount: { increment: extraTotal },
           final_amount: { increment: extraTotal },
-          ...(paymentMethod ? { payment_method: paymentMethod } : {})
+          ...(paymentMethod ? { payment_method: paymentMethod } : {}),
         },
-        include: { items: { include: { product: true, variant: true, toppings: true } } }
+        include: {
+          items: { include: { product: true, variant: true, toppings: true } },
+        },
       });
 
       // Deduct materials
-      const enrichedItems = items.map(item => ({
+      const enrichedItems = items.map((item) => ({
         ...item,
-        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm'
+        product_name: productMap.get(item.product_id)?.name_vi || 'Sản phẩm',
       }));
-      await this.materialService.deductStockForOrder(id, updatedOrder.order_number, enrichedItems, tx);
+      await this.materialService.deductStockForOrder(
+        id,
+        updatedOrder.order_number,
+        enrichedItems,
+        tx,
+      );
 
       return updatedOrder;
     });
   }
 
-  async getDashboardStats(branch_id?: string, startDateStr?: string, endDateStr?: string) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  async getDashboardStats(
+    branch_id?: string,
+    startDateStr?: string,
+    endDateStr?: string,
+  ) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
 
     let rangeStart = new Date();
     rangeStart.setDate(rangeStart.getDate() - 7);
@@ -244,43 +315,57 @@ export class OrderService {
     const where: any = { created_at: { gte: rangeStart, lte: rangeEnd } };
     if (branch_id) where.branch_id = branch_id;
 
-    const [periodStats, allStatsInPeriod, topProductsRaw, ordersInPeriod] = await Promise.all([
-      this.prisma.order.aggregate({
-        _sum: { total_amount: true, discount_amount: true, final_amount: true },
-        _count: { id: true },
-        where
-      }),
-      this.prisma.order.findMany({
-        where,
-        select: { created_at: true, final_amount: true }
-      }),
-      this.prisma.orderItem.groupBy({
-        by: ['product_id'],
-        where: { order: where },
-        _sum: { quantity: true },
-        orderBy: { _sum: { quantity: 'desc' } },
-        take: 5
-      }),
-      this.prisma.order.findMany({
-        where,
-        select: { created_at: true, items: { select: { quantity: true, toppings: true } } }
-      })
-    ]);
+    const [periodStats, allStatsInPeriod, topProductsRaw, ordersInPeriod] =
+      await Promise.all([
+        this.prisma.order.aggregate({
+          _sum: {
+            total_amount: true,
+            discount_amount: true,
+            final_amount: true,
+          },
+          _count: { id: true },
+          where,
+        }),
+        this.prisma.order.findMany({
+          where,
+          select: { created_at: true, final_amount: true },
+        }),
+        this.prisma.orderItem.groupBy({
+          by: ['product_id'],
+          where: { order: where },
+          _sum: { quantity: true },
+          orderBy: { _sum: { quantity: 'desc' } },
+          take: 5,
+        }),
+        this.prisma.order.findMany({
+          where,
+          select: {
+            created_at: true,
+            items: { select: { quantity: true, toppings: true } },
+          },
+        }),
+      ]);
 
     const productIds = topProductsRaw.map((p: any) => p.product_id);
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name_vi: true }
+      select: { id: true, name_vi: true },
     });
 
     const top_products = topProductsRaw.map((tp: any) => ({
-      name: products.find((pr: any) => pr.id === tp.product_id)?.name_vi || 'Ẩn danh',
-      count: tp._sum.quantity
+      name:
+        products.find((pr: any) => pr.id === tp.product_id)?.name_vi ||
+        'Ẩn danh',
+      count: tp._sum.quantity,
     }));
 
-    const hourlyMap: Record<string, { products: number; toppings: number }> = {};
+    const hourlyMap: Record<string, { products: number; toppings: number }> =
+      {};
     for (let h = 0; h <= 23; h++) {
-      hourlyMap[h.toString().padStart(2, '0') + ':00'] = { products: 0, toppings: 0 };
+      hourlyMap[h.toString().padStart(2, '0') + ':00'] = {
+        products: 0,
+        toppings: 0,
+      };
     }
 
     ordersInPeriod.forEach((o: any) => {
@@ -288,7 +373,7 @@ export class OrderService {
       const hourStr = new Intl.DateTimeFormat('en-GB', {
         hour: '2-digit',
         hour12: false,
-        timeZone: 'Asia/Ho_Chi_Minh'
+        timeZone: 'Asia/Ho_Chi_Minh',
       }).format(d);
 
       const hour = parseInt(hourStr, 10);
@@ -299,7 +384,7 @@ export class OrderService {
         o.items.forEach((i: any) => {
           pCount += i.quantity;
           if (i.toppings && Array.isArray(i.toppings)) {
-            tCount += (i.toppings.length * i.quantity);
+            tCount += i.toppings.length * i.quantity;
           }
         });
         hourlyMap[key].products += pCount;
@@ -308,11 +393,17 @@ export class OrderService {
     });
 
     const transaction_count_by_hour = Object.entries(hourlyMap)
-      .map(([hour, counts]) => ({ hour, products: counts.products, toppings: counts.toppings }))
+      .map(([hour, counts]) => ({
+        hour,
+        products: counts.products,
+        toppings: counts.toppings,
+      }))
       .sort((a, b) => a.hour.localeCompare(b.hour));
 
     const revenueMap: Record<string, number> = {};
-    const daysDiff = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.ceil(
+      (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     for (let i = 0; i <= daysDiff; i++) {
       const d = new Date(rangeStart);
@@ -331,10 +422,15 @@ export class OrderService {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh'
-      }).format(d).split('/').reverse().join('-'); // DD/MM/YYYY -> YYYY-MM-DD
+        timeZone: 'Asia/Ho_Chi_Minh',
+      })
+        .format(d)
+        .split('/')
+        .reverse()
+        .join('-'); // DD/MM/YYYY -> YYYY-MM-DD
 
-      if (revenueMap[dateKey] !== undefined) revenueMap[dateKey] += o.final_amount;
+      if (revenueMap[dateKey] !== undefined)
+        revenueMap[dateKey] += o.final_amount;
     });
 
     const revenue_by_day = Object.entries(revenueMap)
@@ -348,13 +444,15 @@ export class OrderService {
     const prevRangeStart = new Date(rangeStart.getTime() - diffMs);
     const prevRangeEnd = new Date(rangeStart.getTime() - 1);
 
-    const prevWhere: any = { created_at: { gte: prevRangeStart, lte: prevRangeEnd } };
+    const prevWhere: any = {
+      created_at: { gte: prevRangeStart, lte: prevRangeEnd },
+    };
     if (branch_id) prevWhere.branch_id = branch_id;
 
     const prevStats = await this.prisma.order.aggregate({
       _sum: { final_amount: true },
       _count: { id: true },
-      where: prevWhere
+      where: prevWhere,
     });
 
     const calculateChange = (current: number, previous: number) => {
@@ -373,9 +471,15 @@ export class OrderService {
       comparison: {
         prev_total_orders: prevStats._count.id,
         prev_total_net_revenue: prevStats._sum.final_amount || 0,
-        orders_change_percent: calculateChange(periodStats._count.id, prevStats._count.id),
-        revenue_change_percent: calculateChange(sum.final_amount || 0, prevStats._sum.final_amount || 0)
-      }
+        orders_change_percent: calculateChange(
+          periodStats._count.id,
+          prevStats._count.id,
+        ),
+        revenue_change_percent: calculateChange(
+          sum.final_amount || 0,
+          prevStats._sum.final_amount || 0,
+        ),
+      },
     };
   }
 
@@ -388,9 +492,8 @@ export class OrderService {
       data: { print_count: { increment: 1 } },
       include: {
         branch: true,
-        items: { include: { product: true, variant: true, toppings: true } }
-      }
+        items: { include: { product: true, variant: true, toppings: true } },
+      },
     });
   }
 }
-

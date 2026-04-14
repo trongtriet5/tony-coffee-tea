@@ -13,21 +13,24 @@ async function bootstrap() {
     app = await NestFactory.create(AppModule);
 
     // Enable CORS for frontend and mobile app
-    const allowedOrigins = process.env.CORS_ORIGIN 
-      ? process.env.CORS_ORIGIN.split(',') 
+    const allowedOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
       : [
-          'http://localhost:3000', 
-          'http://localhost:3002', 
+          'http://localhost:3000',
+          'http://localhost:3002',
           'https://tony-coffee-tea.vercel.app',
-          'http://127.0.0.1:3000'
+          'http://127.0.0.1:3000',
         ];
 
     app.enableCors({
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+
+        if (
+          allowedOrigins.indexOf(origin) !== -1 ||
+          process.env.NODE_ENV === 'development'
+        ) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
@@ -60,7 +63,7 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    
+
     // Fix Swagger UI white screen on Vercel
     const customOptions = {
       swaggerOptions: {

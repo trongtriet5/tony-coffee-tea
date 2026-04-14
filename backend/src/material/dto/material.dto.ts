@@ -18,14 +18,17 @@ export class CreateMaterialDto {
   @IsNumber()
   cost_per_unit: number;
 
-  @ApiPropertyOptional({ example: 10, description: 'Tồn kho ban đầu' })
+  @ApiPropertyOptional({ example: 10, description: 'Tồn kho hiện tại' })
   @IsOptional()
   @IsNumber()
-  initial_stock?: number;
+  stock_current?: number;
 }
 
 export class UpdateMaterialDto {
-  @ApiPropertyOptional({ example: 'Cà phê Robusta', description: 'Tên nguyên liệu' })
+  @ApiPropertyOptional({
+    example: 'Cà phê Robusta',
+    description: 'Tên nguyên liệu',
+  })
   @IsOptional()
   @IsString()
   name?: string;
@@ -35,12 +38,18 @@ export class UpdateMaterialDto {
   @IsString()
   unit?: string;
 
-  @ApiPropertyOptional({ example: 120000, description: 'Giá vốn mỗi đơn vị (VND)' })
+  @ApiPropertyOptional({
+    example: 120000,
+    description: 'Giá vốn mỗi đơn vị (VND)',
+  })
   @IsOptional()
   @IsNumber()
   cost_per_unit?: number;
 
-  @ApiPropertyOptional({ example: 5.5, description: 'Tồn kho hiện tại (cập nhật thủ công)' })
+  @ApiPropertyOptional({
+    example: 5.5,
+    description: 'Tồn kho hiện tại (cập nhật thủ công)',
+  })
   @IsOptional()
   @IsNumber()
   stock_current?: number;
@@ -51,7 +60,12 @@ export class MaterialTransactionDto {
   @IsString()
   material_id: string;
 
-  @ApiProperty({ enum: ['IN', 'OUT', 'ADJUST', 'USED'], example: 'IN', description: 'Loại giao dịch: IN=nhập, OUT=xuất, ADJUST=điều chỉnh, USED=đã dùng' })
+  @ApiProperty({
+    enum: ['IN', 'OUT', 'ADJUST', 'USED'],
+    example: 'IN',
+    description:
+      'Loại giao dịch: IN=nhập, OUT=xuất, ADJUST=điều chỉnh, USED=đã dùng',
+  })
   @IsString()
   type: 'IN' | 'OUT' | 'ADJUST' | 'USED';
 

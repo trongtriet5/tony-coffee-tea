@@ -3,16 +3,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Employee } from "@/types";
 
-/**
- * Shared hook to get the current authenticated user.
- * Reads from localStorage and redirects to /login if not found.
- * Re-evaluates whenever the URL route changes.
- */
 export function useCurrentUser(redirectIfUnauthenticated = true): Employee | null {
   const [user, setUser] = useState<Employee | null>(null);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    setIsClient(true);
     const userStr = localStorage.getItem("user");
     if (!userStr) {
       if (redirectIfUnauthenticated) {
@@ -31,12 +28,10 @@ export function useCurrentUser(redirectIfUnauthenticated = true): Employee | nul
     }
   }, [redirectIfUnauthenticated, router]);
 
+  if (!isClient) return null;
   return user;
 }
 
-/**
- * Helper: check if current user has one of the given roles.
- */
 export function useHasRole(...roles: Employee["role"][]): boolean {
   const user = useCurrentUser(false);
   if (!user) return false;

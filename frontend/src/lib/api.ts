@@ -56,10 +56,25 @@ export interface CreateOrderPayload {
 export const createOrder = (data: CreateOrderPayload): Promise<Order> => api.post('/orders', data).then((r) => r.data);
 export const getOrders = (params?: { branch_id?: string; page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
 export const getOrder = (id: string): Promise<Order> => api.get(`/orders/${id}`).then((r) => r.data);
-export const getBranches = (): Promise<any[]> => api.get('/branches').then((r) => r.data);
-export const createBranch = (data: any): Promise<any> => api.post('/branches', data).then((r) => r.data);
-export const updateBranch = (id: string, data: any): Promise<any> => api.patch(`/branches/${id}`, data).then((r) => r.data);
-export const deleteBranch = (id: string): Promise<any> => api.delete(`/branches/${id}`).then((r) => r.data);
+let branchesCache: any[] | null = null;
+export const getBranches = async (): Promise<any[]> => {
+  if (branchesCache) return branchesCache;
+  const res = await api.get('/branches');
+  branchesCache = res.data;
+  return res.data;
+};
+export const createBranch = (data: any): Promise<any> => {
+  branchesCache = null; 
+  return api.post('/branches', data).then((r) => r.data);
+};
+export const updateBranch = (id: string, data: any): Promise<any> => {
+  branchesCache = null;
+  return api.patch(`/branches/${id}`, data).then((r) => r.data);
+};
+export const deleteBranch = (id: string): Promise<any> => {
+  branchesCache = null;
+  return api.delete(`/branches/${id}`).then((r) => r.data);
+};
 
 export const getEmployees = (): Promise<any[]> => api.get('/employees').then((r) => r.data);
 export const createEmployee = (data: any): Promise<any> => api.post('/employees', data).then((r) => r.data);
@@ -91,7 +106,7 @@ export interface MaterialTransaction {
 }
 
 export const getMaterials = (branchId?: string): Promise<Material[]> => api.get('/materials', { params: { branch_id: branchId } }).then((r) => r.data);
-export const createMaterial = (data: { name: string; unit: string; cost_per_unit: number; initial_stock?: number }): Promise<Material> => api.post('/materials', data).then((r) => r.data);
+export const createMaterial = (data: { name: string; unit: string; cost_per_unit: number; stock_current?: number }): Promise<Material> => api.post('/materials', data).then((r) => r.data);
 export const updateMaterial = (id: string, data: Partial<Material>): Promise<Material> => api.put(`/materials/${id}`, data).then((r) => r.data);
 export const deleteMaterial = (id: string): Promise<void> => api.delete(`/materials/${id}`).then((r) => r.data);
 export const addMaterialTransaction = (data: { material_id: string; type: 'IN' | 'OUT' | 'ADJUST' | 'USED'; quantity: number; note?: string }): Promise<any> => api.post('/materials/transactions/add', data).then((r) => r.data);
