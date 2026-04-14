@@ -60,9 +60,24 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: { persistAuthorization: true },
-    });
+    
+    // Fix Swagger UI white screen on Vercel
+    const customOptions = {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+      customSiteTitle: 'iPOS API Documentation',
+      customfavIcon: 'https://vercel.com/favicon.ico',
+      customjs: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.min.js',
+      ],
+      customCssUrl: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
+      ],
+    };
+
+    SwaggerModule.setup('api/docs', app, document, customOptions);
 
     await app.init();
   }
