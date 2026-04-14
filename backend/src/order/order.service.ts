@@ -315,36 +315,24 @@ export class OrderService {
     const where: any = { created_at: { gte: rangeStart, lte: rangeEnd } };
     if (branch_id) where.branch_id = branch_id;
 
-    const [periodStats, allStatsInPeriod, topProductsRaw, ordersInPeriod] =
-      await Promise.all([
-        this.prisma.order.aggregate({
-          _sum: {
-            total_amount: true,
-            discount_amount: true,
-            final_amount: true,
-          },
-          _count: { id: true },
-          where,
-        }),
-        this.prisma.order.findMany({
-          where,
-          select: { created_at: true, final_amount: true },
-        }),
-        this.prisma.orderItem.groupBy({
-          by: ['product_id'],
-          where: { order: where },
-          _sum: { quantity: true },
-          orderBy: { _sum: { quantity: 'desc' } },
-          take: 5,
-        }),
-        this.prisma.order.findMany({
-          where,
-          select: {
-            created_at: true,
-            items: { select: { quantity: true, toppings: true } },
-          },
-        }),
-      ]);
+    const [periodStats, topProductsRaw] = await Promise.all([
+      this.prisma.order.aggregate({
+        _sum: {
+          total_amount: true,
+          discount_amount: true,
+          final_amount: true,
+        },
+        _count: { id: true },
+        where,
+      }),
+      this.prisma.orderItem.groupBy({
+        by: ['product_id'],
+        where: { order: where },
+        _sum: { quantity: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 5,
+      }),
+    ]);
 
     const productIds = topProductsRaw.map((p: any) => p.product_id);
     const products = await this.prisma.product.findMany({
@@ -368,38 +356,6 @@ export class OrderService {
       };
     }
 
-    ordersInPeriod.forEach((o: any) => {
-      const d = new Date(o.created_at);
-      const hourStr = new Intl.DateTimeFormat('en-GB', {
-        hour: '2-digit',
-        hour12: false,
-        timeZone: 'Asia/Ho_Chi_Minh',
-      }).format(d);
-
-      const hour = parseInt(hourStr, 10);
-      const key = hour.toString().padStart(2, '0') + ':00';
-      if (hourlyMap[key] !== undefined) {
-        let pCount = 0;
-        let tCount = 0;
-        o.items.forEach((i: any) => {
-          pCount += i.quantity;
-          if (i.toppings && Array.isArray(i.toppings)) {
-            tCount += i.toppings.length * i.quantity;
-          }
-        });
-        hourlyMap[key].products += pCount;
-        hourlyMap[key].toppings += tCount;
-      }
-    });
-
-    const transaction_count_by_hour = Object.entries(hourlyMap)
-      .map(([hour, counts]) => ({
-        hour,
-        products: counts.products,
-        toppings: counts.toppings,
-      }))
-      .sort((a, b) => a.hour.localeCompare(b.hour));
-
     const revenueMap: Record<string, number> = {};
     const daysDiff = Math.ceil(
       (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24),
@@ -415,31 +371,8 @@ export class OrderService {
       revenueMap[key] = 0;
     }
 
-    allStatsInPeriod.forEach((o: any) => {
-      const d = new Date(o.created_at);
-      // Group by Asia/Ho_Chi_Minh date
-      const dateKey = new Intl.DateTimeFormat('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh',
-      })
-        .format(d)
-        .split('/')
-        .reverse()
-        .join('-'); // DD/MM/YYYY -> YYYY-MM-DD
-
-      if (revenueMap[dateKey] !== undefined)
-        revenueMap[dateKey] += o.final_amount;
-    });
-
-    const revenue_by_day = Object.entries(revenueMap)
-      .map(([date, revenue]) => ({ date, revenue }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
     const sum = periodStats._sum;
 
-    // --- Comparison Logic ---
     const diffMs = rangeEnd.getTime() - rangeStart.getTime();
     const prevRangeStart = new Date(rangeStart.getTime() - diffMs);
     const prevRangeEnd = new Date(rangeStart.getTime() - 1);
@@ -465,9 +398,17 @@ export class OrderService {
       total_revenue: sum.total_amount || 0,
       total_discount: sum.discount_amount || 0,
       total_net_revenue: sum.final_amount || 0,
-      revenue_by_day,
+      revenue_by_day: Object.entries(revenueMap)
+        .map(([date, revenue]) => ({ date, revenue }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
       top_products,
-      transaction_count_by_hour,
+      transaction_count_by_hour: Object.entries(hourlyMap)
+        .map(([hour, counts]) => ({
+          hour,
+          products: counts.products,
+          toppings: counts.toppings,
+        }))
+        .sort((a, b) => a.hour.localeCompare(b.hour)),
       comparison: {
         prev_total_orders: prevStats._count.id,
         prev_total_net_revenue: prevStats._sum.final_amount || 0,
