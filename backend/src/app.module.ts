@@ -12,6 +12,7 @@ import { BranchModule } from './branch/branch.module';
 import { AuthModule } from './auth/auth.module';
 import { EmployeeModule } from './employee/employee.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+import { HealthController } from './common/controllers/health.controller';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
     AuthModule,
     EmployeeModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_FILTER,

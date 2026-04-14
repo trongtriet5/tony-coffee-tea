@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { createProduct, updateProduct, getProducts, getCategories, createTopping, updateTopping, getToppings, deleteProduct, deleteTopping } from "@/lib/api";
 import { useProducts, useCategories, useToppings, optimisticCreateProduct, optimisticUpdateProduct, optimisticDeleteProduct, optimisticCreateTopping, optimisticUpdateTopping, optimisticDeleteTopping, refreshProducts } from "@/lib/useProducts";
 import type { Product, Topping } from "@/types";
@@ -34,13 +34,12 @@ export default function ProductsManagementPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refreshProducts();
     mutateProducts();
     mutateCategories();
     mutateToppings();
-  };
-
+  }, [mutateProducts, mutateCategories, mutateToppings]);
 
   const handleCreateOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
