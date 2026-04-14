@@ -12,8 +12,10 @@
       "dest": "src/main.ts"
     }
   ],
-  "crons": {
-    "period": "25m",
-    "path": "/api/warmup"
-  }
+  "crons": [
+    {
+      "path": "/api/warmup",
+      "schedule": "*/25 * * * *"
+    }
+  ]
 }
