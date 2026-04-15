@@ -24,7 +24,7 @@ export default function MaterialsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
-  const [materialForm, setMaterialForm] = useState({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
+  const [materialForm, setMaterialForm] = useState({ name: "", unit: "", cost_per_unit: "", stock_current: "", safety_stock: "" });
 
   const [transactionForm, setTransactionForm] = useState({ type: "IN" as const, quantity: "", note: "" });
 
@@ -98,6 +98,7 @@ export default function MaterialsPage() {
         unit: materialForm.unit,
         cost_per_unit: parseFloat(materialForm.cost_per_unit),
         stock_current: materialForm.stock_current ? parseFloat(materialForm.stock_current) : 0,
+        safety_stock: materialForm.safety_stock ? parseFloat(materialForm.safety_stock) : null,
       };
 
       if (editingMaterialId) {
@@ -108,7 +109,7 @@ export default function MaterialsPage() {
         toastSuccess("Đã thêm nguyên liệu mới thành công!");
       }
 
-      setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
+      setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "", safety_stock: "" });
       setEditingMaterialId(null);
       fetchData();
     } catch (error) {
@@ -157,7 +158,7 @@ export default function MaterialsPage() {
 
   const startEditMaterial = (m: Material) => {
     setEditingMaterialId(m.id);
-    setMaterialForm({ name: m.name, unit: m.unit, cost_per_unit: m.cost_per_unit.toString(), stock_current: "" });
+    setMaterialForm({ name: m.name, unit: m.unit, cost_per_unit: m.cost_per_unit.toString(), stock_current: "", safety_stock: m.safety_stock?.toString() || "" });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -199,7 +200,7 @@ export default function MaterialsPage() {
 
   const cancelEdit = () => {
     setEditingMaterialId(null);
-    setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "" });
+    setMaterialForm({ name: "", unit: "", cost_per_unit: "", stock_current: "", safety_stock: "" });
   };
 
   const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
@@ -288,12 +289,11 @@ export default function MaterialsPage() {
                       <label style={labelStyle}>GIÁ/ĐƠN VỊ (VNĐ)</label>
                       <input required type="number" step="0.01" placeholder="VD: 150000" style={inputStyle} value={materialForm.cost_per_unit} onChange={e => setMaterialForm({ ...materialForm, cost_per_unit: e.target.value })} />
                     </div>
-                    {!editingMaterialId && (
-                      <div>
-                        <label style={labelStyle}>TỒN KHO HIỆN TẠI (tuỳ chọn)</label>
-                        <input type="number" step="0.01" placeholder="VD: 10" style={inputStyle} value={materialForm.stock_current} onChange={e => setMaterialForm({ ...materialForm, stock_current: e.target.value })} />
-                      </div>
-                    )}
+                    <div>
+                      <label style={labelStyle}>TỒN KHO AN TOÀN (Safety Stock)</label>
+                      <input type="number" step="0.01" placeholder="VD: 3" style={inputStyle} value={materialForm.safety_stock} onChange={e => setMaterialForm({ ...materialForm, safety_stock: e.target.value })} />
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Đề xuất đặt hàng khi tồn kho dưới mức này</p>
+                    </div>
                   </div>
 
                   <button disabled={loading} type="submit" style={{ width: "100%", padding: 18, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s" }} className="hover-btn">
@@ -346,9 +346,15 @@ export default function MaterialsPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <span style={{ fontSize: 16, fontWeight: 900 }}>{m.name}</span>
                             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)" }}>({m.unit})</span>
+                            {m.safety_stock !== undefined && m.safety_stock !== null && m.stock_current <= m.safety_stock && (
+                              <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 6px", borderRadius: 4, background: "var(--danger)", color: "white" }}>CẦN ĐẶT</span>
+                            )}
                           </div>
-                          <div style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 700, display: "flex", gap: 16 }}>
-                            <span style={{ color: m.stock_current <= 0 ? "var(--danger)" : "inherit", fontWeight: m.stock_current <= 0 ? 900 : 700 }}>Tồn: {Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")} {m.unit}</span>
+                          <div style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 700, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                            <span style={{ color: m.stock_current <= 0 ? "var(--danger)" : m.stock_current <= (m.safety_stock || 0) ? "#f59e0b" : "inherit", fontWeight: m.stock_current <= 0 ? 900 : 700 }}>Tồn: {Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")} {m.unit}</span>
+                            {m.safety_stock !== undefined && m.safety_stock !== null && (
+                              <span style={{ color: "var(--text-muted)", fontSize: 12 }}>An toàn: {Number(m.safety_stock).toFixed(3)}</span>
+                            )}
                             {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                               <>
                                 <span>Giá: ₫{m.cost_per_unit.toLocaleString("vi-VN")}</span>
@@ -388,6 +394,9 @@ export default function MaterialsPage() {
                   )}
                   <th style={{ padding: "12px 16px", fontWeight: 900 }}>TỒN HIỆN TẠI</th>
                   {currentUser?.role?.toUpperCase() === 'ADMIN' && (
+                    <th style={{ padding: "12px 16px", fontWeight: 900 }}>AN TOÀN</th>
+                  )}
+                  {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                     <th style={{ padding: "12px 16px", fontWeight: 900, textAlign: "right" }}>GIÁ TRỊ TỒN</th>
                   )}
                 </tr>
@@ -409,7 +418,10 @@ export default function MaterialsPage() {
                       {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                         <td style={{ padding: "16px" }}>₫{m.cost_per_unit.toLocaleString("vi-VN")}</td>
                       )}
-                      <td style={{ padding: "16px", fontWeight: 900, color: m.stock_current <= 0 ? "var(--danger)" : "var(--success)" }}>{Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")}</td>
+                      <td style={{ padding: "16px", fontWeight: 900, color: m.stock_current <= 0 ? "var(--danger)" : m.stock_current <= (m.safety_stock || 0) ? "#f59e0b" : "var(--success)" }}>{Number(m.stock_current).toFixed(3).replace(/\.?0+$/, "")}</td>
+                      {currentUser?.role?.toUpperCase() === 'ADMIN' && (
+                        <td style={{ padding: "16px", fontSize: 12, color: m.safety_stock !== undefined && m.safety_stock !== null ? "var(--text-muted)" : "transparent" }}>{m.safety_stock !== undefined && m.safety_stock !== null ? Number(m.safety_stock).toFixed(3) : "-"}</td>
+                      )}
                       {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                         <td style={{ padding: "16px", textAlign: "right", fontWeight: 900, color: "var(--accent)" }}>₫{m.stock_value.toLocaleString("vi-VN")}</td>
                       )}

@@ -1092,6 +1092,66 @@ async function main() {
   const toppingRecipes: any[] = [];
   for (const tr of toppingRecipes) { await prisma.toppingRecipe.upsert({ where: { id: tr.id }, update: tr, create: tr }); }
 
+  // Seed 50 orders for Cafe sữa đá with various times and days
+  console.log('--- SEEDING 50 ORDERS FOR CAFE SỮA ĐÁ ---');
+  
+  const cafeSuaDaProductId = "a4bc96c2-9800-4b51-9b29-ff5ec5474f4d";
+  const cafeSuaDaVariantId = "b7d2dc5e-66a5-429d-b53c-022d809617bc";
+  const branchIds = ["b1-uuid", "b2-uuid"];
+  const tableIds = [
+    "0c22539b-306c-4eda-af7e-186d4e7349de", "157b7577-4897-4d42-bd2c-d2ea80d28944", "29f46007-ad04-44b1-bb14-3bcf1b75ecea",
+    "2c68c66e-329d-48c5-b363-6e85abd6b262", "35378245-96c8-432b-9f69-4f910dcf7de6", "46be2959-1eea-4e32-840d-9ed043b2e491",
+    "4c4de19b-5dc4-4cd2-8d75-633906bc1a14", "5fb25500-5362-46c5-a5fb-64154f7f96d2", "60ebc4b1-2f82-4347-9433-13a2b30f75ba",
+    "61fbea86-41c7-4251-8b24-347da69d9a80"
+  ];
+  
+  // Generate orders over the past 14 days with different hours
+  const hours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  
+  for (let i = 0; i < 50; i++) {
+    const dayOffset = Math.floor(i / 4); // Distribute across ~12 days
+    const hour = hours[i % hours.length];
+    const branchId = branchIds[i % branchIds.length];
+    const tableId = tableIds[(i + Math.floor(i/3)) % tableIds.length];
+    
+    const orderDate = new Date();
+    orderDate.setDate(orderDate.getDate() - dayOffset);
+    orderDate.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
+    
+    const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 cups per order
+    const unitPrice = 25000;
+    const subtotal = quantity * unitPrice;
+    
+    const order = await prisma.order.create({
+      data: {
+        order_number: `ORD-${Date.now()}-${i}`,
+        branch_id: branchId,
+        table_id: tableId,
+        status: "COMPLETED",
+        payment_method: "CASH",
+        order_type: "TAKEAWAY",
+        source: "POS",
+        total_amount: subtotal,
+        discount_amount: 0,
+        final_amount: subtotal,
+        created_at: orderDate,
+      }
+    });
+    
+    await prisma.orderItem.create({
+      data: {
+        order_id: order.id,
+        product_id: cafeSuaDaProductId,
+        variant_id: cafeSuaDaVariantId,
+        quantity: quantity,
+        unit_price: unitPrice,
+        subtotal: subtotal,
+        note: null,
+      }
+    });
+  }
+  console.log('--- 50 ORDERS SEEDED ---');
+
   console.log('--- SEEDING COMPLETED ---');
 }
 

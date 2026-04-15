@@ -145,6 +145,7 @@ model Material {
   unit            String
   cost_per_unit   Float
   stock_current   Float                 @default(0)
+  safety_stock    Float?                // Tồn kho an toàn - dựa trên dữ liệu bán hàng
   transactions    MaterialTransaction[]
   branch          Branch?               @relation(fields: [branch_id], references: [id])
   product_recipes ProductRecipe[]

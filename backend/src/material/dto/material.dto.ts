@@ -22,6 +22,11 @@ export class CreateMaterialDto {
   @IsOptional()
   @IsNumber()
   stock_current?: number;
+
+  @ApiPropertyOptional({ example: 5, description: 'Tồn kho an toàn (Safety Stock) - đề xuất đặt hàng khi dưới mức này' })
+  @IsOptional()
+  @IsNumber()
+  safety_stock?: number;
 }
 
 export class UpdateMaterialDto {
@@ -53,6 +58,14 @@ export class UpdateMaterialDto {
   @IsOptional()
   @IsNumber()
   stock_current?: number;
+
+  @ApiPropertyOptional({
+    example: 3,
+    description: 'Tồn kho an toàn (Safety Stock)',
+  })
+  @IsOptional()
+  @IsNumber()
+  safety_stock?: number;
 }
 
 export class MaterialTransactionDto {
@@ -85,6 +98,7 @@ export class MaterialResponseDto {
   unit: string;
   cost_per_unit: number;
   stock_current: number;
+  safety_stock?: number;
   stock_value: number;
   created_at: Date;
 }

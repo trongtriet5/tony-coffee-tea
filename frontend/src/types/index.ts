@@ -111,6 +111,7 @@ export interface Material {
   unit: string;
   cost_per_unit: number;
   stock_current: number;
+  safety_stock?: number;
   stock_value: number;
   created_at: Date;
 }

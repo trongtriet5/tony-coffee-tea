@@ -702,6 +702,7 @@ export class MaterialService {
       unit: material.unit,
       cost_per_unit: material.cost_per_unit,
       stock_current: material.stock_current,
+      safety_stock: material.safety_stock,
       stock_value: material.stock_current * material.cost_per_unit,
       created_at: material.created_at,
     };
