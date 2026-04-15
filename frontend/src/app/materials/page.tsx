@@ -508,7 +508,7 @@ export default function MaterialsPage() {
                             </span>
                           </td>
                           <td style={{ padding: "16px", fontSize: 14, color: "var(--text-secondary)", fontWeight: 700 }}>
-                            {tx.note || "Hao hụt tự động"}
+                            {tx.note || (tx.type === 'IN' ? 'Nhập hàng' : tx.type === 'OUT' ? 'Xuất hàng' : 'Điều chỉnh')}
                           </td>
                         </tr>
                       ))
