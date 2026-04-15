@@ -1124,7 +1124,7 @@ async function main() {
     
     const order = await prisma.order.create({
       data: {
-        order_number: `ORD-${Date.now()}-${i}`,
+        order_number: `TONY-${String(orderDate.getDate()).padStart(2, '0')}${String(orderDate.getMonth() + 1).padStart(2, '0')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         branch_id: branchId,
         table_id: tableId,
         status: "COMPLETED",

@@ -267,7 +267,7 @@ export default function DashboardPage() {
                         offset: 8,
                         font: { weight: 900, size: 11 },
                         formatter: (v: any) => v > 0 ? formatK(v) : '',
-                        display: 'auto'
+                        display: stats.revenue_by_day.length <= 20 ? true : false
                       },
                       tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, callbacks: { label: (c: any) => formatVND(c.raw as number) } }
                     },
@@ -282,7 +282,12 @@ export default function DashboardPage() {
                       x: {
                         border: { display: false },
                         grid: { display: false },
-                        ticks: { maxTicksLimit: stats.revenue_by_day.length > 30 ? 15 : undefined, font: { family: 'inherit', size: 11, weight: 800 }, color: 'var(--text-muted)' }
+                        ticks: { 
+                          maxTicksLimit: stats.revenue_by_day.length > 60 ? 12 : stats.revenue_by_day.length > 30 ? 15 : stats.revenue_by_day.length > 14 ? 20 : undefined, 
+                          font: { family: 'inherit', size: 11, weight: 800 }, 
+                          color: 'var(--text-muted)',
+                          maxRotation: stats.revenue_by_day.length > 30 ? 45 : 0
+                        }
                       }
                     }
                   }}
@@ -305,7 +310,7 @@ export default function DashboardPage() {
                 ))
               ) : (stats && stats.top_products.map((p, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 20 }} className="animate-fade-in">
-                  <div style={{ width: 160, fontSize: 13, fontWeight: 800, color: "var(--text-primary)", textAlign: "right", lineHeight: 1.2 }}>
+                  <div style={{ width: 160, fontSize: 13, fontWeight: 800, color: "var(--text-primary)", textAlign: "left", lineHeight: 1.2 }}>
                     {p.name}
                   </div>
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 16 }}>
@@ -340,7 +345,9 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ height: 320, width: "100%" }}>
-            {stats && (
+            {loading && !stats ? (
+              <div className="skeleton" style={{ height: "100%", width: "100%", borderRadius: 16 }} />
+            ) : stats && (
               <Bar
                 data={{
                   labels: stats.transaction_count_by_hour.map(h => h.hour),
