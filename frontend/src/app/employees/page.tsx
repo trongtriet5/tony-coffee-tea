@@ -96,7 +96,7 @@ export default function EmployeesPage() {
   };
 
   const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 14, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const labelStyle = { fontSize: 13, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, display: "block" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -109,18 +109,18 @@ export default function EmployeesPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.8fr", gap: 32 }}>
           <div>
             <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, position: "sticky", top: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24 }}>{editingId ? "SỬA TÀI KHOẢN" : "TẠO TÀI KHOẢN MỚI"}</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24 }}>{editingId ? "Sửa tài khoản" : "Tạo tài khoản mới"}</h3>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <label style={labelStyle}>TÊN NHÂN VIÊN</label>
+                  <label style={labelStyle}>Tên nhân viên</label>
                   <input required placeholder="VD: Nguyễn Văn A" style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div>
-                  <label style={labelStyle}>TÊN ĐĂNG NHẬP</label>
+                  <label style={labelStyle}>Tên đăng nhập</label>
                   <input required placeholder="VD: van_a_01" style={inputStyle} value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
                 </div>
                 <div>
-                  <label style={labelStyle}>MẬT KHẨU {editingId && "(Để trống nếu không đổi)"}</label>
+                  <label style={labelStyle}>Mật khẩu {editingId && "(để trống nếu không đổi)"}</label>
                   <input type="password" required={!editingId} placeholder="••••••••" style={inputStyle} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
                 </div>
                 <div>

@@ -191,7 +191,7 @@ export default function RecipePage() {
   };
 
   const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 13, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const labelStyle = { fontSize: 13, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, display: "block" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -407,21 +407,9 @@ export default function RecipePage() {
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                         {activeTab === "product" && (
                           <div>
-                            <label style={labelStyle}>SIZE</label>
-                            <select style={{ ...inputStyle, padding: "8px 12px" }} value={selectedVariantId} onChange={e => setSelectedVariantId(e.target.value)} required>
-                              {products.find(p => p.id === selectedProductId)?.variants?.map(v => (
-                                <option key={v.id} value={v.id}>{v.size} - ₫{v.price.toLocaleString("vi-VN")}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                        <div>
-                          <label style={labelStyle}>ĐỊNH LƯỢNG (số)</label>
-                          <input type="number" step="0.01" required placeholder="VD: 30" style={{ ...inputStyle, padding: "8px 12px" }} value={recipeForm.quantity} onChange={e => setRecipeForm({ ...recipeForm, quantity: e.target.value })} />
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: 16 }}>
-                        <label style={labelStyle}>NGUYÊN LIỆU</label>
+<label style={labelStyle}>Size</label>
+                          <label style={labelStyle}>Định lượng (số)</label>
+                        <label style={labelStyle}>Nguyên liệu</label>
                         <select style={{ ...inputStyle, padding: "8px 12px" }} value={recipeForm.material_id} onChange={e => setRecipeForm({ ...recipeForm, material_id: e.target.value })} required>
                           <option value="">-- Chọn nguyên liệu --</option>
                           {materials.map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}

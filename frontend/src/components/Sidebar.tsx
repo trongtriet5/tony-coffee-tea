@@ -3,8 +3,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HiLogout, HiOfficeBuilding, HiUsers, HiViewGrid } from "react-icons/hi";
-import { MdOutlineReceiptLong, MdOutlineSpaceDashboard, MdPayment, MdTableBar } from "react-icons/md";
-import { FiBox, FiGitBranch } from "react-icons/fi";
+import { MdOutlineReceiptLong, MdOutlineSpaceDashboard, MdTableBar } from "react-icons/md";
+import { FiBox, FiBook } from "react-icons/fi";
+import { BiTrendingUp } from "react-icons/bi";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -37,15 +38,15 @@ export default function Sidebar() {
   if (pathname.startsWith('/staff-portal') || pathname === '/login') return null;
 
   const menuItems = [
-    { href: "/", icon: MdOutlineSpaceDashboard, label: "POS", roles: ["MANAGER", "STAFF"] },
-    { href: "/orders", icon: MdOutlineReceiptLong, label: "History", roles: ["ADMIN", "MANAGER", "STAFF"] },
-    { href: "/dashboard", icon: MdPayment, label: "Stats", roles: ["ADMIN"] },
-    { href: "/products", icon: HiViewGrid, label: "Products", roles: ["ADMIN", "MANAGER"] },
-    { href: "/materials", icon: FiBox, label: "Materials", roles: ["ADMIN", "MANAGER"] },
-    { href: "/recipes", icon: FiGitBranch, label: "Recipes", roles: ["ADMIN", "MANAGER"] },
-    { href: "/tables", icon: MdTableBar, label: "Tables", roles: ["ADMIN", "MANAGER"] },
-    { href: "/branches", icon: HiOfficeBuilding, label: "Branches", roles: ["ADMIN"] },
-    { href: "/employees", icon: HiUsers, label: "Accounts", roles: ["ADMIN"] },
+    { href: "/", icon: MdOutlineSpaceDashboard, label: "Bán hàng", roles: ["MANAGER", "STAFF"] },
+    { href: "/orders", icon: MdOutlineReceiptLong, label: "Lịch sử", roles: ["ADMIN", "MANAGER", "STAFF"] },
+    { href: "/dashboard", icon: BiTrendingUp, label: "Báo cáo", roles: ["ADMIN"] },
+    { href: "/products", icon: HiViewGrid, label: "Sản phẩm", roles: ["ADMIN", "MANAGER"] },
+    { href: "/materials", icon: FiBox, label: "Nguyên liệu", roles: ["ADMIN", "MANAGER"] },
+    { href: "/recipes", icon: FiBook, label: "Công thức", roles: ["ADMIN", "MANAGER"] },
+    { href: "/tables", icon: MdTableBar, label: "Bàn", roles: ["ADMIN", "MANAGER"] },
+    { href: "/branches", icon: HiOfficeBuilding, label: "Chi nhánh", roles: ["ADMIN"] },
+    { href: "/employees", icon: HiUsers, label: "Tài khoản", roles: ["ADMIN"] },
   ];
 
   // Robust filtering: default to nothing if no user, but match case-insensitively

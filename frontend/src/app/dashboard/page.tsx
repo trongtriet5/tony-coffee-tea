@@ -221,7 +221,7 @@ export default function DashboardPage() {
           <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "48px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 48 }}>
               <div>
-                <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>Revenue Flow</h3>
+                <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>Doanh thu theo ngày</h3>
                 <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700 }}>Biến động doanh thu trong giai đoạn chọn</p>
               </div>
               {loading && <AiOutlineLoading3Quarters className="spin" color="var(--accent)" />}
@@ -299,9 +299,9 @@ export default function DashboardPage() {
           {/* TOP PRODUCTS CHART */}
           <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "40px" }}>
             <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-              <HiStar color="var(--accent)" /> Top Performance
+              <HiStar color="var(--accent)" /> Sản phẩm bán chạy
             </h3>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Sản phẩm bán chạy nhất giai đoạn này</p>
+            <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 700, marginBottom: 32 }}>Top sản phẩm bán chạy nhất giai đoạn này</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 12 }}>
               {loading && !stats ? (
@@ -340,7 +340,7 @@ export default function DashboardPage() {
         {/* TRANSACTION COUNT ANALYZE (HOURLY) */}
         <div style={{ marginTop: 32, background: "white", border: "1px solid var(--border)", borderRadius: 32, padding: "48px" }}>
           <div style={{ marginBottom: 40 }}>
-            <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Total Product Sold</h3>
+            <h3 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Sản phẩm bán ra</h3>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700 }}>Tổng hợp lưu lượng bán ra (sản phẩm và topping) theo khung giờ</p>
           </div>
 

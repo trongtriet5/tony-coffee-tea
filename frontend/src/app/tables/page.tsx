@@ -214,7 +214,7 @@ export default function TablesManagementPage() {
   };
 
   const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 14, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const labelStyle = { fontSize: 14, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, display: "block" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -329,15 +329,9 @@ export default function TablesManagementPage() {
                 </h3>
                 <form onSubmit={handleAddTable} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   <div>
-                    <label style={labelStyle}>TÊN BÀN CỤ THỂ</label>
-                    <input
-                      placeholder="vd: Bàn A1" style={inputStyle} value={tableName}
-                      onChange={e => { setTableName(e.target.value); if (e.target.value) setTableCount(''); }}
-                    />
-                  </div>
-                  <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>HOẶC TẠO NHIỀU BÀN CÙNG LÚC</div>
-                  <div>
-                    <label style={labelStyle}>SỐ LƯỢNG BÀN CẦN TẠO</label>
+<label style={labelStyle}>Tên bàn cụ thể</label>
+                    <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>Hoặc tạo nhiều bàn cùng lúc</div>
+                    <label style={labelStyle}>Số lượng bàn cần tạo</label>
                     <input
                       type="number" min="1" max="100" placeholder="vd: 10" style={inputStyle} value={tableCount}
                       onChange={e => { setTableCount(e.target.value); if (e.target.value) setTableName(''); }}

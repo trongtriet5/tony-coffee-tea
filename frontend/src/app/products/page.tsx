@@ -168,7 +168,7 @@ export default function ProductsManagementPage() {
   };
 
   const inputStyle = { width: "100%", padding: "14px 18px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 15, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 13, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const labelStyle = { fontSize: 13, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, display: "block" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -208,19 +208,19 @@ export default function ProductsManagementPage() {
                 <form onSubmit={handleCreateOrUpdateProduct}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
                     <div>
-                      <label style={labelStyle}>TÊN MÓN (TIẾNG VIỆT)</label>
-                      <input disabled={currentUser?.role !== 'ADMIN'} required placeholder="VD: Cà Phê Sữa Đá" style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={productForm.name_vi} onChange={e => setProductForm({ ...productForm, name_vi: e.target.value })} />
+<label style={labelStyle}>Tên món (Tiếng Việt)</label>
+                      <input required placeholder="VD: Cà phê sữa đá" style={inputStyle} value={productForm.name_vi} onChange={e => setProductForm({ ...productForm, name_vi: e.target.value })} />
                     </div>
                     <div>
-                      <label style={labelStyle}>TÊN MÓN (TIẾNG ANH)</label>
-                      <input disabled={currentUser?.role !== 'ADMIN'} placeholder="VD: Iced Milk Coffee" style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={productForm.name_en} onChange={e => setProductForm({ ...productForm, name_en: e.target.value })} />
+                      <label style={labelStyle}>Tên món (Tiếng Anh)</label>
+                      <input required placeholder="VD: Vietnamese iced coffee" style={inputStyle} value={productForm.name_en} onChange={e => setProductForm({ ...productForm, name_en: e.target.value })} />
                     </div>
                     <div>
-                      <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
+                      <label style={labelStyle}>Giá bán (VNĐ)</label>
                       <input disabled={currentUser?.role !== 'ADMIN'} required type="number" placeholder="VD: 35000" style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} />
                     </div>
                     <div>
-                      <label style={labelStyle}>DANH MỤC</label>
+                      <label style={labelStyle}>Danh mục</label>
                       <select disabled={currentUser?.role !== 'ADMIN'} style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })}>
                         {categories.map(c => <option key={c.category} value={c.category}>{c.category}</option>)}
                         {!categories.find(c => c.category === "Cà Phê") && <option value="Cà Phê">Cà Phê</option>}
@@ -255,11 +255,11 @@ export default function ProductsManagementPage() {
                 <form onSubmit={handleCreateOrUpdateTopping}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 24 }}>
                     <div>
-                      <label style={labelStyle}>TÊN TOPPING</label>
-                      <input disabled={currentUser?.role !== 'ADMIN'} required placeholder="VD: Trân Châu Trắng" style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={toppingForm.name} onChange={e => setToppingForm({ ...toppingForm, name: e.target.value })} />
+<label style={labelStyle}>Tên topping</label>
+                      <input required placeholder="VD: Trân châu" style={inputStyle} value={toppingForm.name} onChange={e => setToppingForm({ ...toppingForm, name: e.target.value })} />
                     </div>
                     <div>
-                      <label style={labelStyle}>GIÁ BÁN (VNĐ)</label>
+                      <label style={labelStyle}>Giá bán (VNĐ)</label>
                       <input disabled={currentUser?.role !== 'ADMIN'} required type="number" placeholder="VD: 10000" style={{ ...inputStyle, opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }} value={toppingForm.price} onChange={e => setToppingForm({ ...toppingForm, price: e.target.value })} />
                     </div>
                   </div>

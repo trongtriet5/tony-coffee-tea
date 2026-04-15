@@ -75,7 +75,7 @@ export default function BranchesPage() {
   };
 
   const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 14, fontWeight: 700, outline: "none", transition: "0.2s", background: "var(--bg-primary)" };
-  const labelStyle = { fontSize: 12, fontWeight: 900, color: "var(--text-muted)", marginBottom: 8, display: "block", letterSpacing: "0.5px" };
+  const labelStyle = { fontSize: 13, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, display: "block" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: isMobile ? "32px 24px" : "40px 40px 60px 120px" }}>
@@ -88,18 +88,18 @@ export default function BranchesPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 32 }}>
           <div>
             <div style={{ background: "white", borderRadius: 24, border: "1px solid var(--border)", padding: 32, boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24 }}>{editingId ? "SỬA CHI NHÁNH" : "THÊM CHI NHÁNH"}</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 900, marginBottom: 24 }}>{editingId ? "Sửa chi nhánh" : "Thêm chi nhánh"}</h3>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <label style={labelStyle}>TÊN CHI NHÁNH</label>
+                  <label style={labelStyle}>Tên chi nhánh</label>
                   <input required style={inputStyle} value={branchForm.name} onChange={e => setBranchForm({ ...branchForm, name: e.target.value })} />
                 </div>
                 <div>
-                  <label style={labelStyle}>ĐỊA CHỈ</label>
+                  <label style={labelStyle}>Địa chỉ</label>
                   <input style={inputStyle} value={branchForm.address} onChange={e => setBranchForm({ ...branchForm, address: e.target.value })} />
                 </div>
                 <div>
-                  <label style={labelStyle}>SỐ ĐIỆN THOẠI</label>
+                  <label style={labelStyle}>Số điện thoại</label>
                   <input style={inputStyle} value={branchForm.phone} onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })} />
                 </div>
                 <button type="submit" disabled={loading} style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
