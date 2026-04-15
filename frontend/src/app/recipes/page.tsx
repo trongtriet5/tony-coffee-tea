@@ -26,6 +26,7 @@ export default function RecipePage() {
   const [recipes, setRecipes] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
+  const [recipeLoading, setRecipeLoading] = useState(false);
   const [recipeFilter, setRecipeFilter] = useState<'all' | 'has' | 'no'>('all');
   const [fetchLoading, setFetchLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -87,17 +88,21 @@ export default function RecipePage() {
 
 
   const loadProductRecipes = async (variantId: string) => {
+    setRecipeLoading(true);
     try {
       const data = await getRecipesByVariant(variantId);
       setRecipes(data);
     } catch (err) { console.error(err); }
+    finally { setRecipeLoading(false); }
   };
 
   const loadToppingRecipes = async (toppingId: string) => {
+    setRecipeLoading(true);
     try {
       const data = await getToppingRecipes(toppingId);
       setRecipes(data);
     } catch (err) { console.error(err); }
+    finally { setRecipeLoading(false); }
   };
 
   const handleAddRecipe = async (e: React.FormEvent) => {
@@ -357,7 +362,16 @@ export default function RecipePage() {
                 </div>
 
                 <div style={{ flex: 1, overflowY: "auto", paddingRight: 12, marginBottom: 24, minHeight: 0 }} className="custom-scroll">
-                  {recipes.length === 0 ? (
+                  {recipeLoading ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[1,2,3,4,5].map(i => (
+                        <div key={i} style={{ padding: "16px 20px", borderRadius: 16, background: "var(--bg-primary)" }}>
+                          <div style={{ height: 14, width: "60%", background: "var(--border)", borderRadius: 4, marginBottom: 8, opacity: 0.5 }}></div>
+                          <div style={{ height: 10, width: "30%", background: "var(--border)", borderRadius: 4, opacity: 0.3 }}></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : recipes.length === 0 ? (
                     <div style={{ padding: 24, textAlign: "center", color: "var(--text-secondary)" }}>
                       Chưa có công thức nào. Thêm nguyên liệu ở dưới.
                     </div>
