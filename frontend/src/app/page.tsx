@@ -527,6 +527,14 @@ export default function POSPage() {
     );
   }
 
+  // Admin role should be redirected to dashboard
+  if (currentUser?.role === 'ADMIN') {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/dashboard') {
+      window.location.href = '/dashboard';
+      return null;
+    }
+  }
+
   return (
     <div style={{ display: "flex", height: "100dvh", background: "var(--bg-primary)", overflow: "hidden", paddingLeft: isMobile ? 0 : 80 }}>
 
@@ -551,8 +559,8 @@ export default function POSPage() {
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  disabled={!!activeOrderId || currentUser?.role !== 'ADMIN'}
-                  style={{ background: "none", border: "none", fontSize: 13, fontWeight: 700, color: "var(--text-secondary)", outline: "none", cursor: "pointer", opacity: (activeOrderId || currentUser?.role !== 'ADMIN') ? 0.6 : 1 }}
+                  disabled={!!activeOrderId || currentUser?.role === 'ADMIN'}
+                  style={{ background: "none", border: "none", fontSize: 13, fontWeight: 700, color: "var(--text-secondary)", outline: "none", cursor: "pointer", opacity: (activeOrderId || currentUser?.role === 'ADMIN') ? 0.6 : 1 }}
                 >
                   {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
