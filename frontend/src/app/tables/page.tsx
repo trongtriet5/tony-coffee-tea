@@ -107,8 +107,15 @@ export default function TablesManagementPage() {
     try {
       if (tableCount) {
         const count = parseInt(tableCount);
-        for (let i = 1; i <= count; i++) {
-          await createTable({ name: `Bàn ${i}`, branch_id: selectedBranchId });
+        
+        // Find highest table number in current branch
+        const existingTableNumbers = tables
+          .filter(t => t.name?.match(/^Bàn\s*(\d+)$/))
+          .map(t => parseInt(t.name.replace('Bàn ', '').trim()));
+        const startNum = existingTableNumbers.length > 0 ? Math.max(...existingTableNumbers) + 1 : 1;
+        
+        for (let i = 0; i < count; i++) {
+          await createTable({ name: `Bàn ${startNum + i}`, branch_id: selectedBranchId });
         }
         toastSuccess(`Đã tạo ${count} bàn mới!`);
       } else if (tableName) {
@@ -335,7 +342,15 @@ export default function TablesManagementPage() {
                       type="number" min="1" max="100" placeholder="vd: 10" style={inputStyle} value={tableCount}
                       onChange={e => { setTableCount(e.target.value); if (e.target.value) setTableName(''); }}
                     />
-                    <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, fontWeight: 700 }}>Sẽ tự động tạo: Bàn 1, Bàn 2...</p>
+                    {(() => {
+                      const existingTableNumbers = tables
+                        .filter(t => t.name?.match(/^Bàn\s*(\d+)$/))
+                        .map(t => parseInt(t.name.replace('Bàn ', '').trim()));
+                      const startNum = existingTableNumbers.length > 0 ? Math.max(...existingTableNumbers) + 1 : 1;
+                      const count = parseInt(tableCount) || 0;
+                      const endNum = startNum + count - 1;
+                      return count > 0 ? <p style={{ fontSize: 11, color: "var(--accent)", marginTop: 8, fontWeight: 700 }}>Sẽ tự động tạo: Bàn {startNum} - Bàn {endNum}</p> : null;
+                    })()}
                   </div>
                   <button disabled={loading || (!tableName && !tableCount)} type="submit" style={{ width: "100%", padding: 16, background: "var(--accent)", color: "white", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 900, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", transition: "0.2s", marginTop: 12 }} className="hover-btn">
                     {loading ? <AiOutlineLoading3Quarters size={18} className="spin" /> : <><HiPlus size={18} /> THÊM NGAY</>}

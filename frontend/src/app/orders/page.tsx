@@ -182,7 +182,7 @@ export default function OrdersPage() {
             <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 24 : 0, justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: isMobile ? 32 : 40 }}>
                <div>
                   <h1 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 900 }}>Lịch sử đơn hàng</h1>
-                  <p style={{ color: "var(--text-secondary)", fontSize: isMobile ? 14 : 15, fontWeight: 700 }}>Theo dõi lịch sử giao dịch chuỗi Tony Coffee & Tea</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: isMobile ? 14 : 15, fontWeight: 700 }}>Theo dõi lịch sử đơn hàng</p>
                </div>
                <div style={{ display: "flex", flexWrap: isMobile ? "wrap" : "nowrap", gap: 12, width: isMobile ? "100%" : "auto" }}>
                   {currentUser?.role === 'ADMIN' && (
