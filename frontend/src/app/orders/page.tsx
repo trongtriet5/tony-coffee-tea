@@ -387,7 +387,7 @@ export default function OrdersPage() {
                         <div style={{ marginBottom: 32 }}>
                            <p style={{ fontSize: 11, fontWeight: 900, color: "var(--text-muted)", marginBottom: 16 }}>SẢN PHẨM ĐÃ CHỌN</p>
                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                              {selectedOrder.items.map((item, i) => (
+                              {(selectedOrder.items || []).map((item, i) => (
                                  <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
                                     <div style={{ flex: 1 }}>
                                        <div style={{ display: "flex", gap: 12 }}>
@@ -483,7 +483,7 @@ export default function OrdersPage() {
                            </tr>
                         </thead>
                         <tbody style={{ fontSize: "11px" }}>
-                           {selectedOrder.items.map((item, i) => (
+                           {(selectedOrder.items || []).map((item, i) => (
                               <tr key={i}>
                                  <td style={{ padding: "4px 0" }}>
                                     {i + 1}. {item.product?.name_vi || "Món"}

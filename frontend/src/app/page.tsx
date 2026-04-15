@@ -6,7 +6,7 @@ import {
   HiChevronLeft, HiPlus, HiMinus, HiTrash, HiShoppingCart,
   HiSearch, HiCheckCircle, HiX, HiPlusCircle, HiOfficeBuilding
 } from "react-icons/hi";
-import { MdOutlineReceiptLong, MdOutlineSpaceDashboard, MdPayment } from "react-icons/md";
+import { MdOutlineReceiptLong, MdPayment } from "react-icons/md";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { BiCoffeeTogo, BiDish } from "react-icons/bi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -523,26 +523,6 @@ export default function POSPage() {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
         <AiOutlineLoading3Quarters size={40} className="spin" color="var(--accent)" />
-      </div>
-    );
-  }
-
-  // Admin View (CMS Mode)
-  if (currentUser?.role?.toUpperCase() === 'ADMIN') {
-    return (
-      <div style={{ display: "flex", height: "100dvh", background: "var(--bg-primary)", overflow: "hidden", paddingLeft: isMobile ? 0 : 80 }}>
-        <div style={{ flex: 1, padding: "60px 40px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-          <div style={{ width: 80, height: 80, background: "var(--accent-light)", borderRadius: "24px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
-            <MdOutlineSpaceDashboard size={40} color="var(--accent)" />
-          </div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 12 }}>SYSTEM <span style={{ color: "var(--accent)" }}>CMS</span></h1>
-          <p style={{ color: "var(--text-secondary)", maxWidth: 500, fontWeight: 600, marginBottom: 40 }}>Chào mừng Tổng Quản Lý. Đây là giao diện Bán hàng (POS). Bạn đang ở chế độ Quản trị, vui lòng truy cập Dashboard để xem báo cáo tài chính và quản lý hệ thống.</p>
-
-          <div style={{ display: "flex", gap: 16 }}>
-            <a href="/dashboard" style={{ textDecoration: "none", background: "black", color: "white", padding: "16px 32px", borderRadius: "16px", fontWeight: 900, fontSize: 16 }}>ĐẾN TRANG QUẢN TRỊ</a>
-            <button onClick={() => { localStorage.clear(); window.location.href = "/login" }} style={{ background: "white", border: "1px solid var(--border)", color: "var(--danger)", padding: "16px 32px", borderRadius: "16px", fontWeight: 900, fontSize: 16 }}>ĐĂNG XUẤT</button>
-          </div>
-        </div>
       </div>
     );
   }

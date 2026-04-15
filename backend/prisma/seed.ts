@@ -209,7 +209,7 @@ async function main() {
     "name": "Cà phê hạt",
     "unit": "kg",
     "cost_per_unit": 200000,
-    "stock_current": 9.940000000000001
+    "stock_current": 20
   },
   {
     "id": "e80be473-89dc-4d83-a134-76ebb3aaeb11",
@@ -217,7 +217,7 @@ async function main() {
     "name": "Sữa đặc",
     "unit": "kg",
     "cost_per_unit": 60000,
-    "stock_current": 9.940000000000001
+    "stock_current": 20
   }
 ];
   for (const m of materials) { await prisma.material.upsert({ where: { id: m.id }, update: m, create: m }); }
@@ -1149,6 +1149,31 @@ async function main() {
         note: null,
       }
     });
+
+    // Deduct materials based on recipe
+    const recipes = await prisma.productRecipe.findMany({
+      where: { variant_id: cafeSuaDaVariantId },
+      include: { material: true }
+    });
+
+    for (const recipe of recipes) {
+      const amountUsed = recipe.quantity * quantity;
+      const material = await prisma.material.findUnique({ where: { id: recipe.material_id } });
+      if (material) {
+        await prisma.material.update({
+          where: { id: recipe.material_id },
+          data: { stock_current: material.stock_current - amountUsed }
+        });
+        await prisma.materialTransaction.create({
+          data: {
+            material_id: recipe.material_id,
+            type: "USED",
+            quantity: -amountUsed,
+            note: `Seed: Đơn ${order.order_number}`,
+          }
+        });
+      }
+    }
   }
   console.log('--- 50 ORDERS SEEDED ---');
 

@@ -120,7 +120,7 @@ export default function TablesManagementPage() {
         toastSuccess(`Đã tạo ${count} bàn mới!`);
       } else if (tableName) {
         await createTable({ name: tableName, branch_id: selectedBranchId });
-        toastSuccess(`Đã tạo bàn ${tableName}!`);
+        toastSuccess(`Tạo bàn ${tableName} thành công!`);
       }
       setTableName('');
       setTableCount('');
