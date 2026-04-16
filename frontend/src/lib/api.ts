@@ -56,11 +56,12 @@ export interface CreateOrderPayload {
 export const createOrder = (data: CreateOrderPayload): Promise<Order> => api.post('/orders', data).then((r) => r.data);
 export const getOrders = (params?: { branch_id?: string; page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Order>> => api.get('/orders', { params }).then((r) => r.data);
 export const getOrder = (id: string): Promise<Order> => api.get(`/orders/${id}`).then((r) => r.data);
-let branchesCache: any[] | null = null;
+let branchesCache: { data: any[]; timestamp: number } | null = null;
+const BRANCH_CACHE_TTL = 60000;
 export const getBranches = async (): Promise<any[]> => {
-  if (branchesCache) return branchesCache;
+  if (branchesCache && Date.now() - branchesCache.timestamp < BRANCH_CACHE_TTL) return branchesCache.data;
   const res = await api.get('/branches');
-  branchesCache = res.data;
+  branchesCache = { data: res.data, timestamp: Date.now() };
   return res.data;
 };
 export const createBranch = (data: any): Promise<any> => {

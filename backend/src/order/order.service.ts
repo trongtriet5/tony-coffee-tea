@@ -267,10 +267,7 @@ export class OrderService {
     });
 
     return this.prisma.$transaction(async (tx) => {
-      // Create new items
-      for (const itemData of itemsData) {
-        await tx.orderItem.create({ data: itemData });
-      }
+      await tx.orderItem.createMany({ data: itemsData });
 
       // Update order total
       const updatedOrder = await tx.order.update({

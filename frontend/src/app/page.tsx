@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from "react";
 import { getProducts, getCategories, getToppings, createOrder, getAvailableTables, getOrder, addItemsToOrder, getBranches } from "@/lib/api";
 import type { Product, Topping, CartItem, PaymentMethod, OrderType, Table, Branch, ProductVariant, Order } from "@/types";
 import {
@@ -217,6 +217,7 @@ export default function POSPage() {
   const [paymentPending, setPaymentPending] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -337,36 +338,35 @@ export default function POSPage() {
     if (selectedCategory === "Topping") {
       return toppings.map(t => ({
         id: t.id, name_vi: t.name, name_en: "Topping", price: t.price, category: "Topping", available: t.available, variants: []
-      } as any)).filter(p => p.name_vi.toLowerCase().includes(searchQuery.toLowerCase()));
+      } as any)).filter(p => p.name_vi.toLowerCase().includes(deferredSearchQuery.toLowerCase()));
     }
     return products.filter((p) => {
       const matchCat = selectedCategory === "all" || p.category === selectedCategory;
-      const matchSearch = p.name_vi.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = p.name_vi.toLowerCase().includes(deferredSearchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [products, toppings, selectedCategory, searchQuery]);
+  }, [products, toppings, selectedCategory, deferredSearchQuery]);
 
-  const handleItemClick = (p: Product) => {
+  const handleItemClick = useCallback((p: Product) => {
     if (p.category === "Đồ Ăn" || p.category === "Topping") {
-      // Small products or toppings might not have variants
       const dummyVariantId = p.variants?.[0]?.id;
       addToCart(p, dummyVariantId, []);
     } else {
       setActiveProduct(p);
-      setSelectedVariant(p.variants?.[0] || null); // Default to first variant (often 'M' or 'S')
+      setSelectedVariant(p.variants?.[0] || null);
       setSelectedToppings({});
     }
-  };
+  }, [addToCart]);
 
-  const updateToppingQty = (tId: string, delta: number) => {
+  const updateToppingQty = useCallback((tId: string, delta: number) => {
     setSelectedToppings(prev => {
       const current = prev[tId] || 0;
       const next = Math.max(0, current + delta);
       return { ...prev, [tId]: next };
     });
-  };
+  }, []);
 
-  const confirmAddToCart = () => {
+  const confirmAddToCart = useCallback(() => {
     if (activeProduct) {
       const topsArr: Topping[] = [];
       Object.entries(selectedToppings).forEach(([id, qty]) => {
@@ -379,9 +379,9 @@ export default function POSPage() {
       setActiveProduct(null);
       setSelectedVariant(null);
     }
-  };
+  }, [activeProduct, selectedVariant, selectedToppings, toppings]);
 
-  const addToCart = (product: Product, variantId: string | undefined, selectedTops: Topping[]) => {
+  const addToCart = useCallback((product: Product, variantId: string | undefined, selectedTops: Topping[]) => {
     setCart((prev) => {
       const topIds = selectedTops.map(t => t.id).sort().join(',');
       const existing = prev?.find((i) =>
@@ -396,23 +396,23 @@ export default function POSPage() {
       }
       return [...prev, { product, variant_id: variantId, quantity: 1, selectedToppings: selectedTops }];
     });
-  };
+  }, []);
 
-  const updateQty = (item: CartItem, delta: number) => {
+  const updateQty = useCallback((item: CartItem, delta: number) => {
     setCart((prev) => prev.map((i) => i === item ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
-  };
+  }, []);
 
-  const calculateItemPrice = (item: CartItem) => {
+  const calculateItemPrice = useCallback((item: CartItem) => {
     const variant = item.product?.variants?.find(v => v.id === item.variant_id);
     const base = variant ? variant.price : (item.product as any).price || 0;
     const tops = (item.selectedToppings || []).reduce((s, t) => s + t.price, 0);
     return base + tops;
-  };
+  }, []);
 
-  const totalAmount = cart.reduce((s, i) => {
+  const totalAmount = useMemo(() => cart.reduce((s, i) => {
     if (i.isExisting) return s;
     return s + calculateItemPrice(i) * i.quantity;
-  }, 0);
+  }, 0), [cart, calculateItemPrice]);
   const finalAmount = Math.max(0, totalAmount - discount);
 
   const checkout = async () => {

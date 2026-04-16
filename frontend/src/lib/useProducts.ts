@@ -32,9 +32,11 @@ export function useToppings(all: boolean = true) {
 }
 
 export async function refreshProducts() {
-  await mutate(`${API_URL}/products`);
-  await mutate(`${API_URL}/products/categories`);
-  await mutate(`${API_URL}/products/toppings`);
+  await Promise.all([
+    mutate(`${API_URL}/products`),
+    mutate(`${API_URL}/products/categories`),
+    mutate(`${API_URL}/products/toppings`),
+  ]);
 }
 
 export async function optimisticCreateProduct(data: any) {

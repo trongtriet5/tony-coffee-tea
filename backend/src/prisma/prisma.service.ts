@@ -15,19 +15,14 @@ export class PrismaService
         },
       },
     });
+    this.$connect();
   }
 
   async onModuleInit() {
-    if (process.env.VERCEL) {
-      await this.$connect();
-    } else {
-      await this.$connect();
-    }
+    await this.$connect();
   }
 
   async onModuleDestroy() {
-    if (!process.env.VERCEL) {
-      await this.$disconnect();
-    }
+    await this.$disconnect();
   }
 }
